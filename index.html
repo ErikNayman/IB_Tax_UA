@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>IB → Налоги Украина (ПДФО + ВЗ) — v3 (FIFO + НБУ)</title>
+  <title>IB → Налоги Украина (ПДФО + ВЗ) — v3.1 (FIFO + НБУ)</title>
   <style>
     :root {
       --bg: #0b0f17;
@@ -110,7 +110,7 @@
 
 <body>
 <header>
-  <h1>IB → Налоги Украина (ПДФО + военный сбор) — v3 <span class="tag">FIFO + НБУ</span></h1>
+  <h1>IB → Налоги Украина (ПДФО + военный сбор) — v3.1 <span class="tag">FIFO + НБУ</span></h1>
   <p>
     Локальный HTML‑калькулятор: загружаешь CSV из IB → загружаешь/скачиваешь курсы НБУ → получаешь расчёт ПДФО/ВЗ,
     таблицу Ф1 и экспорт (CSV/XLSX/печать).
@@ -140,8 +140,7 @@
 
       <h3>Курсы НБУ для пересчёта в гривну</h3>
       <div class="small muted">
-        Порядок для “обычного человека”: ① загрузить CSV → ② нажать “Скачать курсы НБУ” (если не сработало — “Показать ссылки НБУ”,
-        скачать JSON вручную, загрузить сюда).
+        Порядок: ① загрузить CSV → ② “Скачать курсы НБУ” (если не сработало — “Показать ссылки НБУ”, скачать JSON вручную и загрузить).
       </div>
 
       <div class="row" style="margin-top:10px;">
@@ -159,7 +158,7 @@
         <button id="btnDownloadFx" disabled>Скачать курсы НБУ (и применить)</button>
         <button id="btnShowFxLinks" class="secondary" disabled>Показать ссылки НБУ (fallback)</button>
         <button id="btnDownloadFxLinksFile" class="secondary" disabled>Скачать файл со ссылками</button>
-        <button id="btnLoadFxFiles" class="secondary">Подгрузить выбранные файлы курсов</button>
+        <button id="btnLoadFxFiles" class="secondary">Подгрузи файлы JSON</button>
         <button id="btnClearFx" class="secondary" disabled>Очистить курсы</button>
       </div>
 
@@ -170,8 +169,8 @@
         <div class="small muted" style="margin-top:8px; line-height:1.5;">
           <ul>
             <li>Браузер может блокировать запросы к NBU API, особенно если HTML открыт как <span class="mono">file://</span> (origin null) или сеть ограничена.</li>
-            <li>Fallback всегда работает: <b>“Показать ссылки НБУ”</b> → открыть ссылку → сохранить JSON → загрузить JSON в этот HTML.</li>
-            <li>Ещё вариант: открыть HTML через локальный сервер: <span class="mono">python -m http.server 8000</span> и открыть <span class="mono">http://localhost:8000/ib_ua_tax_v3.html</span>.</li>
+            <li>Fallback: <b>“Показать ссылки НБУ”</b> → открыть ссылку → сохранить JSON → загрузить JSON в этот HTML.</li>
+            <li>Ещё вариант: открыть HTML через локальный сервер: <span class="mono">python -m http.server 8000</span> и открыть <span class="mono">http://localhost:8000/ib_ua_tax_v3_1.html</span>.</li>
           </ul>
         </div>
       </details>
@@ -317,7 +316,7 @@
     </details>
 
     <details style="margin-top:10px;">
-      <summary>Operations (FIFO matches, первые 300)</summary>
+      <summary>Operations (FIFO matches, показано первые 300)</summary>
       <div class="tableWrap"><table id="tblOps"></table></div>
     </details>
 
@@ -337,7 +336,7 @@
   <section class="card" id="step5">
     <h2>5) Открытые позиции: где сейчас наибольшие убытки (по отчёту)</h2>
     <div class="small muted">
-      Это не рекомендация. Это подсказка: какие позиции сейчас в наибольшем минусе в гривне (по Unrealized P/L из IB и курсу НБУ).
+      Подсказка: какие позиции сейчас в наибольшем минусе в гривне (по Unrealized P/L из IB и курсу НБУ).
     </div>
 
     <div class="row" style="margin-top:10px;">
@@ -379,8 +378,18 @@ function setStatus(el, msg, kind="") {
   el.classList.remove("good","bad","warn");
   if (kind) el.classList.add(kind);
 }
+
+/**
+ * Формат денег: 1'000.00 (2 знака, разделитель тысяч апострофом)
+ */
 function fmt2(x) {
-  return Number.isFinite(x) ? (Math.round((x + Number.EPSILON) * 100) / 100).toFixed(2) : "—";
+  if (!Number.isFinite(x)) return "—";
+  const neg = x < 0;
+  const v = Math.abs(x);
+  const s = (Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2);
+  let [intPart, decPart] = s.split(".");
+  intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+  return (neg ? "-" : "") + intPart + "." + decPart;
 }
 function round2(x) { return Math.round((x + Number.EPSILON) * 100) / 100; }
 
@@ -492,6 +501,16 @@ function parseIBDateTime(s) {
   const time = parts[1] ? parts[1] : "00:00:00";
   return { iso: `${date}T${time}`, tradeDate: date };
 }
+function minIso(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return a < b ? a : b;
+}
+function maxIso(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
 
 /* =========================
    Options parser + assetKey
@@ -544,7 +563,7 @@ function extractSymbolIsinFromDescription(desc) {
 }
 
 /* =========================
-   Statement parser (Flex multi-section CSV)
+   Statement parser
 ========================= */
 function emptyStatement(fileName) {
   return {
@@ -572,7 +591,7 @@ function warn(st, code, message, extra={}) {
 }
 function parseFlexReport(rows, fileName) {
   const st = emptyStatement(fileName);
-  const headers = new Map(); // section -> header array
+  const headers = new Map();
   const seenStatementFields = new Set();
 
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
@@ -590,10 +609,7 @@ function parseFlexReport(rows, fileName) {
     if (type !== "Data") continue;
 
     const header = headers.get(section);
-    if (!header) {
-      // игнорим неизвестные секции без заголовка
-      continue;
-    }
+    if (!header) continue;
     const obj = rowToObject(header, rest);
 
     if (section === "Statement") {
@@ -663,11 +679,6 @@ function parseFlexReport(rows, fileName) {
         proceeds,
         commission: comm,
         netCash,
-        ib: {
-          realizedPL: parseNumber(obj["Realized P/L"]),
-          mtmPL: parseNumber(obj["MTM P/L"]),
-          code: String(obj["Code"] || "").trim(),
-        }
       });
       continue;
     }
@@ -709,7 +720,6 @@ function parseFlexReport(rows, fileName) {
         id: `${fileName}:Withholding:${rowIndex+1}`,
         currency, date, amount,
         description: desc,
-        code: String(obj["Code"] || "").trim(),
         symbolHint: si ? si.symbol : null,
         isinHint: si ? si.isin : null,
       });
@@ -721,11 +731,9 @@ function parseFlexReport(rows, fileName) {
       const currency = String(obj["Currency"] || "").trim();
       const symbolRaw = String(obj["Symbol"] || "").trim();
       const qty = parseNumber(obj["Quantity"]);
-      const mult = parseNumber(obj["Mult"]) ?? 1;
       const costBasis = parseNumber(obj["Cost Basis"]);
       const value = parseNumber(obj["Value"]);
       const upl = parseNumber(obj["Unrealized P/L"]);
-      const closePrice = parseNumber(obj["Close Price"]);
       if (!currency || !symbolRaw || qty === null || costBasis === null || value === null || upl === null) continue;
 
       const ak = makeAssetKey(assetCategory, currency, symbolRaw);
@@ -734,17 +742,14 @@ function parseFlexReport(rows, fileName) {
         id: `${fileName}:OpenPositions:${rowIndex+1}`,
         asset: { assetCategory, currency, symbolRaw, instrument: ak.instrument, assetKey: ak.assetKey, kind: ak.kind },
         quantity: qty,
-        multiplier: mult,
         costBasis,
         value,
         unrealizedPL: upl,
-        closePrice,
       });
       continue;
     }
   }
 
-  // Fallback период из имени файла MULTI_YYYYMMDD_YYYYMMDD.csv
   if (!st.meta.periodStart || !st.meta.periodEnd) {
     const m = String(fileName).match(/_(\d{8})_(\d{8})/);
     if (m) {
@@ -757,7 +762,6 @@ function parseFlexReport(rows, fileName) {
     }
   }
 
-  // предупреждение на FIFO-риски: первая сделка по активу — SELL
   const byAsset = new Map();
   const sorted = st.trades.slice().sort((a,b)=>a.dateTime.localeCompare(b.dateTime));
   for (const t of sorted) {
@@ -811,7 +815,6 @@ function buildAssetIndex(statement) {
     }
   }
 
-  // ISIN из дивидендов/withholding (если есть)
   for (const ci of statement.cashIncomes) {
     const si = extractSymbolIsinFromDescription(ci.description);
     if (!si) continue;
@@ -843,9 +846,7 @@ function humanNameFromAssetKey(assetIndex, assetKey) {
 }
 
 /* =========================
-   NBU FX: URLs + parsing
-   Endpoint:
-   https://bank.gov.ua/NBU_Exchange/exchange_site?start=YYYYMMDD&end=YYYYMMDD&valcode=usd&sort=exchangedate&order=desc&json=
+   NBU FX URLs + parsing
 ========================= */
 function isoToYyyymmdd(iso) { return String(iso).replaceAll("-", ""); }
 function ddmmyyyy_to_iso(s) {
@@ -861,18 +862,12 @@ function buildNbuRangeUrl(ccy, startIso, endIso) {
 }
 
 /* =========================
-   FX store (in-memory) + provider
+   FX store + provider
 ========================= */
 const fxStore = {
-  maps: new Map(),  // ccy -> Map(dateIso -> rate)
-  meta: {
-    provider: null, // "NBU_ONLINE" | "NBU_FILES" | "BUNDLE"
-    range: null,    // {start, end}
-    currencies: [],
-    loadedAt: null,
-  }
+  maps: new Map(),
+  meta: { provider: null, range: null, currencies: [], loadedAt: null }
 };
-
 function fxClear() {
   fxStore.maps.clear();
   fxStore.meta = { provider:null, range:null, currencies:[], loadedAt:null };
@@ -887,7 +882,6 @@ function fxRateSync(currency, isoDate) {
   if (!mp) return null;
   if (mp.has(isoDate)) return mp.get(isoDate);
 
-  // fallback: назад до 10 дней
   let d = new Date(isoDate + "T00:00:00");
   for (let i=0;i<10;i++) {
     d.setDate(d.getDate() - 1);
@@ -896,10 +890,8 @@ function fxRateSync(currency, isoDate) {
   }
   return null;
 }
-const fxProvider = { rateSync: fxRateSync };
 
 function loadFxFromBundle(bundle) {
-  // bundle: { format:"fx_bundle_v1", provider:"NBU", range:{start,end}, currencies:{USD:{date:rate}} }
   fxStore.maps.clear();
   const currencies = [];
   for (const [ccy0, dateMap] of Object.entries(bundle.currencies || {})) {
@@ -920,9 +912,7 @@ function loadFxFromBundle(bundle) {
   fxStore.meta.currencies = currencies.sort();
   fxStore.meta.loadedAt = new Date().toISOString();
 }
-
 function loadFxFromNbuArray(nbuArray) {
-  // raw NBU array: [{cc:"USD", exchangedate:"12.12.2025", rate:...}, ...]
   if (!Array.isArray(nbuArray)) throw new Error("NBU JSON: ожидаю массив.");
   let ccy = null;
   for (const it of nbuArray) {
@@ -946,7 +936,6 @@ function loadFxFromNbuArray(nbuArray) {
 async function loadFxFromFiles(files, progressCb) {
   if (!files || !files.length) throw new Error("Не выбраны файлы курсов.");
   const progress = progressCb || (()=>{});
-
   let loadedBundle = false;
 
   for (const f of files) {
@@ -960,7 +949,6 @@ async function loadFxFromFiles(files, progressCb) {
       loadFxFromBundle(data);
       loadedBundle = true;
       progress(`Загружен bundle: валют ${fxCurrenciesLoaded().join(", ") || "—"}`);
-      // bundle перезаписывает всё; если грузят несколько bundle — оставим последний
       continue;
     }
 
@@ -973,37 +961,9 @@ async function loadFxFromFiles(files, progressCb) {
     throw new Error(`Файл ${f.name}: неизвестный формат (ожидаю fx_bundle_v1 или raw массив НБУ).`);
   }
 
-  // если грузили raw NBU — обновим мету валют
   if (!loadedBundle) {
     fxStore.meta.currencies = fxCurrenciesLoaded();
   }
-}
-
-function exportCurrentFxAsBundle(needs) {
-  // делаем bundle только по нужным валютам и датам; если needs нет — по всем.
-  const currencies = needs?.currencies?.length ? needs.currencies : fxCurrenciesLoaded();
-  const range = needs?.startIso && needs?.endIso ? { start: needs.startIso, end: needs.endIso } : (fxStore.meta.range || null);
-
-  const bundle = {
-    format: "fx_bundle_v1",
-    provider: "NBU",
-    generatedAt: new Date().toISOString(),
-    range,
-    currencies: {}
-  };
-
-  for (const ccy of currencies) {
-    const mp = fxStore.maps.get(ccy);
-    if (!mp) continue;
-    const obj = {};
-    for (const [d, r] of mp.entries()) {
-      // если range задан — можно фильтровать, но оставим все чтобы не потерять бэкап
-      obj[d] = r;
-    }
-    bundle.currencies[ccy] = obj;
-  }
-
-  return bundle;
 }
 
 async function downloadNbuFxBundleOnline(needs, progressCb) {
@@ -1043,7 +1003,7 @@ async function downloadNbuFxBundleOnline(needs, progressCb) {
       if (!Number.isFinite(rate)) continue;
       map[iso] = rate;
     }
-    if (Object.keys(map).length === 0) throw new Error(`НБУ: пустые данные для ${ccy} (возможно, код валюты не поддерживается).`);
+    if (Object.keys(map).length === 0) throw new Error(`НБУ: пустые данные для ${ccy}.`);
 
     bundle.currencies[ccy] = map;
   }
@@ -1053,30 +1013,18 @@ async function downloadNbuFxBundleOnline(needs, progressCb) {
 }
 
 /* =========================
-   FX needs (currencies + date range)
+   FX needs + links
 ========================= */
-function minIso(a, b) {
-  if (!a) return b;
-  if (!b) return a;
-  return a < b ? a : b;
-}
-function maxIso(a, b) {
-  if (!a) return b;
-  if (!b) return a;
-  return a > b ? a : b;
-}
 function computeFxNeeds(statement, taxYear) {
   const yPrefix = String(taxYear) + "-";
   let minDate = null;
   let maxDate = null;
 
-  // trades: нужны все даты (FIFO может использовать старые лоты)
   for (const t of statement.trades) {
     minDate = minIso(minDate, t.tradeDate);
     maxDate = maxIso(maxDate, t.tradeDate);
   }
 
-  // dividends / withholding: достаточно только выбранного года
   for (const ci of statement.cashIncomes) {
     if (!ci.date || !ci.date.startsWith(yPrefix)) continue;
     minDate = minIso(minDate, ci.date);
@@ -1088,18 +1036,15 @@ function computeFxNeeds(statement, taxYear) {
     maxDate = maxIso(maxDate, w.date);
   }
 
-  // positions as-of
   const asOf = statement.meta.asOfDate || statement.meta.periodEnd;
   if (asOf) {
     minDate = minIso(minDate, asOf);
     maxDate = maxIso(maxDate, asOf);
   }
 
-  // fallback если пусто
   if (!minDate) minDate = statement.meta.periodStart || `${taxYear}-01-01`;
   if (!maxDate) maxDate = statement.meta.periodEnd || `${taxYear}-12-31`;
 
-  // currencies used anywhere
   const curSet = new Set();
   for (const t of statement.trades) curSet.add(t.asset.currency);
   for (const ci of statement.cashIncomes) if (ci.date && ci.date.startsWith(yPrefix)) curSet.add(ci.currency);
@@ -1123,7 +1068,7 @@ function buildFxLinksHtml(needs) {
     `<b>Как сделать оффлайн-курсы:</b><br/>`,
     `1) Откройте каждую ссылку<br/>`,
     `2) Сохраните JSON (например USD.json, EUR.json)<br/>`,
-    `3) Загрузите JSON файлы в поле “Файлы курсов” и нажмите “Подгрузить…”<br/><br/>`,
+    `3) Загрузите JSON файлы и нажмите “Подгрузи файлы JSON”<br/><br/>`,
   ].join("");
 
   return intro + items.join("<br/>");
@@ -1148,14 +1093,11 @@ function downloadFxLinksFile(needs) {
   downloadBlob(`nbu_fx_links_${needs.startIso}_${needs.endIso}.html`, "text/html;charset=utf-8", html);
 }
 
-/* =========================
-   FX coverage check
-========================= */
 function assertFxCoverage(statement, taxYear) {
   const needs = computeFxNeeds(statement, taxYear);
   if (!needs.currencies.length) return;
 
-  const needDates = new Map(); // ccy -> Set(dates)
+  const needDates = new Map();
   const add = (ccy, date) => {
     const C = String(ccy||"").toUpperCase();
     if (!C || C === "UAH" || !date) return;
@@ -1163,15 +1105,12 @@ function assertFxCoverage(statement, taxYear) {
     needDates.get(C).add(date);
   };
 
-  // trades: все даты
   for (const t of statement.trades) add(t.asset.currency, t.tradeDate);
 
-  // div/withholding: выбранный год
   const yPrefix = String(taxYear) + "-";
   for (const ci of statement.cashIncomes) if (ci.date && ci.date.startsWith(yPrefix)) add(ci.currency, ci.date);
   for (const w of statement.withholdings) if (w.date && w.date.startsWith(yPrefix)) add(w.currency, w.date);
 
-  // as-of
   const asOf = statement.meta.asOfDate || statement.meta.periodEnd;
   if (asOf) for (const p of statement.positions) add(p.asset.currency, asOf);
 
@@ -1216,7 +1155,7 @@ function allocPart(total, partQtyAbs, totalQtyAbs) {
 }
 async function fifoInUAH(trades) {
   const sorted = trades.slice().sort((a,b) => a.dateTime.localeCompare(b.dateTime));
-  const books = new Map(); // assetKey -> FIFO lots
+  const books = new Map();
   const matches = [];
 
   for (const tr of sorted) {
@@ -1226,8 +1165,8 @@ async function fifoInUAH(trades) {
     const rate = fxRateSync(tr.asset.currency, date);
     if (!rate) throw new Error(`Нет курса для ${tr.asset.currency} на ${date}.`);
 
-    let qtyRem = tr.quantity;             // signed
-    let cashRemUAH = tr.netCash * rate;   // signed
+    let qtyRem = tr.quantity;
+    let cashRemUAH = tr.netCash * rate;
 
     let queue = books.get(assetKey) || [];
 
@@ -1258,14 +1197,12 @@ async function fifoInUAH(trades) {
         pnlUAH,
       });
 
-      // shrink lot
       const lotS = sign(lot.qtySigned);
       lot.qtySigned = lot.qtySigned - lotS * matchQtyAbs;
       lot.cashUAH   = lot.cashUAH   - lotCashPart;
 
-      // shrink trade remainder
       const trS = sign(qtyRem);
-      qtyRem    = qtyRem    - trS * matchQtyAbs;
+      qtyRem     = qtyRem     - trS * matchQtyAbs;
       cashRemUAH = cashRemUAH - trCashPart;
 
       if (abs(lot.qtySigned) < 1e-12) queue.shift();
@@ -1386,14 +1323,12 @@ async function computeDividendsUAH(statement, settings) {
 }
 
 async function computeWithholdingOnDivUAH(statement, settings) {
-  // в IB withholding обычно по дивидендам; дополнительно фильтруем по тексту "dividend" / "payment in lieu"
   const y = String(settings.taxYear) + "-";
   const items = statement.withholdings.filter(w => {
     if (!w.date || !w.date.startsWith(y)) return false;
     const d = String(w.description || "").toLowerCase();
     if (d.includes("dividend")) return true;
     if (settings.treatPILasDividend && d.includes("payment in lieu")) return true;
-    // иначе не считаем как налог по дивидендам
     return false;
   });
 
@@ -1413,7 +1348,8 @@ function renderTable(el, columns, rows) {
   const thead = "<thead><tr>" + columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join("") + "</tr></thead>";
   const tbody = "<tbody>" + rows.map(r => {
     return "<tr>" + columns.map(c => {
-      const v = (typeof c.value === "function") ? c.value(r) : r[c.value];
+      let v = (typeof c.value === "function") ? c.value(r) : r[c.value];
+      if (c.num && Number.isFinite(v)) v = fmt2(v);
       const cls = c.num ? "num" : "";
       return `<td class="${cls}">${escapeHtml(v)}</td>`;
     }).join("") + "</tr>";
@@ -1423,7 +1359,7 @@ function renderTable(el, columns, rows) {
 function firstN(arr, n){ return arr.slice(0, Math.min(n, arr.length)); }
 
 /* =========================
-   Exports (CSV / XLSX / Print)
+   Exports (CSV / XLSX / Print) + huge ops handling
 ========================= */
 async function ensureSheetJS() {
   if (window.XLSX) return true;
@@ -1435,27 +1371,42 @@ async function ensureSheetJS() {
     document.head.appendChild(s);
   });
 }
-function exportCsv(f1) {
+
+function exportCsvF1AndOps(f1) {
+  // F1
   const f1Rows = [
     ["n","assetType","name","incomeUAH","costUAH","resultUAH","assetKey"],
     ...f1.rows.map(r => [r.n, r.assetType, r.name, fmt2(r.incomeUAH), fmt2(r.costUAH), fmt2(r.resultUAH), r.assetKey])
   ];
-  const opsRows = [
-    ["closeDate","assetKey","qtyAbs","incomeUAH","costUAH","resultUAH"],
-    ...f1.operations.map(o => [o.closeDate, o.assetKey, o.qtyAbs, fmt2(o.incomeUAH), fmt2(o.costUAH), fmt2(o.resultUAH)])
-  ];
   downloadBlob(`F1_${f1.taxYear}.csv`, "text/csv;charset=utf-8", toCsv(f1Rows));
-  downloadBlob(`Operations_${f1.taxYear}.csv`, "text/csv;charset=utf-8", toCsv(opsRows));
+
+  // Operations (может быть очень много → делим на части)
+  const header = ["closeDate","assetKey","qtyAbs","incomeUAH","costUAH","resultUAH"];
+  const dataRows = f1.operations.map(o => [o.closeDate, o.assetKey, o.qtyAbs, fmt2(o.incomeUAH), fmt2(o.costUAH), fmt2(o.resultUAH)]);
+
+  // Практический лимит, чтобы не упереться в Excel/память при открытии:
+  const MAX_DATA_ROWS_PER_FILE = 900000; // данные (без заголовка)
+  if (dataRows.length <= MAX_DATA_ROWS_PER_FILE) {
+    downloadBlob(`Operations_${f1.taxYear}.csv`, "text/csv;charset=utf-8", toCsv([header, ...dataRows]));
+  } else {
+    let part = 1;
+    for (let i = 0; i < dataRows.length; i += MAX_DATA_ROWS_PER_FILE) {
+      const slice = dataRows.slice(i, i + MAX_DATA_ROWS_PER_FILE);
+      downloadBlob(`Operations_${f1.taxYear}_part${part}.csv`, "text/csv;charset=utf-8", toCsv([header, ...slice]));
+      part++;
+    }
+  }
 }
+
 function exportPrintableF1(f1) {
   const rowsHtml = f1.rows.map(r => `
     <tr>
       <td>${r.n}</td>
       <td>${r.assetType}</td>
       <td>${escapeHtml(r.name)}</td>
-      <td class="num">${Number(r.incomeUAH).toFixed(2)}</td>
-      <td class="num">${Number(r.costUAH).toFixed(2)}</td>
-      <td class="num">${Number(r.resultUAH).toFixed(2)}</td>
+      <td class="num">${escapeHtml(fmt2(r.incomeUAH))}</td>
+      <td class="num">${escapeHtml(fmt2(r.costUAH))}</td>
+      <td class="num">${escapeHtml(fmt2(r.resultUAH))}</td>
     </tr>`).join("");
 
   const html = `
@@ -1490,22 +1441,22 @@ function exportPrintableF1(f1) {
     ${rowsHtml}
     <tr>
       <td colspan="3"><b>УСЬОГО</b></td>
-      <td class="num"><b>${f1.totals.totalIncomeUAH.toFixed(2)}</b></td>
-      <td class="num"><b>${f1.totals.totalCostUAH.toFixed(2)}</b></td>
-      <td class="num"><b>${f1.totals.totalResultUAH.toFixed(2)}</b></td>
+      <td class="num"><b>${escapeHtml(fmt2(f1.totals.totalIncomeUAH))}</b></td>
+      <td class="num"><b>${escapeHtml(fmt2(f1.totals.totalCostUAH))}</b></td>
+      <td class="num"><b>${escapeHtml(fmt2(f1.totals.totalResultUAH))}</b></td>
     </tr>
   </tbody>
 </table>
 
 <h2>Підсумок</h2>
-<p><b>Рядок 2 (перенесений збиток):</b> ${f1.totals.carryLossUAH.toFixed(2)} грн</p>
-<p><b>Рядок 3 (загальний фінрезультат):</b> ${f1.totals.netResultUAH.toFixed(2)} грн</p>
-<p><b>Рядок 3.1 (прибуток):</b> ${f1.totals.netProfitUAH.toFixed(2)} грн</p>
-<p><b>Рядок 3.2 (збиток):</b> ${f1.totals.netLossUAH.toFixed(2)} грн</p>
+<p><b>Рядок 2 (перенесений збиток):</b> ${escapeHtml(fmt2(f1.totals.carryLossUAH))} грн</p>
+<p><b>Рядок 3 (загальний фінрезультат):</b> ${escapeHtml(fmt2(f1.totals.netResultUAH))} грн</p>
+<p><b>Рядок 3.1 (прибуток):</b> ${escapeHtml(fmt2(f1.totals.netProfitUAH))} грн</p>
+<p><b>Рядок 3.2 (збиток):</b> ${escapeHtml(fmt2(f1.totals.netLossUAH))} грн</p>
 
 <h2>Розділ II</h2>
-<p><b>ПДФО:</b> ${f1.investTaxes.pitUAH.toFixed(2)} грн</p>
-<p><b>Військовий збір:</b> ${f1.investTaxes.milUAH.toFixed(2)} грн</p>
+<p><b>ПДФО:</b> ${escapeHtml(fmt2(f1.investTaxes.pitUAH))} грн</p>
+<p><b>Військовий збір:</b> ${escapeHtml(fmt2(f1.investTaxes.milUAH))} грн</p>
 </body></html>`;
   const w = window.open("", "_blank");
   if (!w) throw new Error("Popup blocked (разрешите всплывающие окна).");
@@ -1513,6 +1464,7 @@ function exportPrintableF1(f1) {
   w.document.write(html);
   w.document.close();
 }
+
 async function exportXlsx(statement, f1, taxSummary) {
   const ok = await ensureSheetJS();
   if (!ok || !window.XLSX) {
@@ -1522,70 +1474,86 @@ async function exportXlsx(statement, f1, taxSummary) {
   const XLSX = window.XLSX;
   const wb = XLSX.utils.book_new();
 
-  // Summary
+  // Summary (всё уже форматированными строками, как просили)
   const sum = [
     [`Summary ${f1.taxYear}`],
     [],
     ["ИНВЕСТРЕЗУЛЬТАТ (FIFO, UAH)"],
-    ["Income", taxSummary.invest.incomeUAH],
-    ["Cost", taxSummary.invest.costUAH],
-    ["Result", taxSummary.invest.resultUAH],
-    ["CarryLoss", taxSummary.invest.carryLossUAH],
-    ["NetResult", taxSummary.invest.netResultUAH],
-    ["NetProfit", taxSummary.invest.netProfitUAH],
-    ["PIT", taxSummary.invest.pitUAH],
-    ["MIL", taxSummary.invest.milUAH],
+    ["Income", fmt2(taxSummary.invest.incomeUAH)],
+    ["Cost", fmt2(taxSummary.invest.costUAH)],
+    ["Result", fmt2(taxSummary.invest.resultUAH)],
+    ["CarryLoss", fmt2(taxSummary.invest.carryLossUAH)],
+    ["NetResult", fmt2(taxSummary.invest.netResultUAH)],
+    ["NetProfit", fmt2(taxSummary.invest.netProfitUAH)],
+    ["PIT", fmt2(taxSummary.invest.pitUAH)],
+    ["MIL", fmt2(taxSummary.invest.milUAH)],
+    ["FIFO operations (year)", String(f1.operations.length)],
     [],
     ["ДИВИДЕНДЫ (UAH)"],
-    ["Dividends", taxSummary.dividends.dividendsUAH],
-    ["Withholding", taxSummary.dividends.withholdingDivUAH],
-    ["PIT gross", taxSummary.dividends.pitGrossUAH],
-    ["Credit", taxSummary.dividends.creditUAH],
-    ["PIT due", taxSummary.dividends.pitDueUAH],
-    ["MIL due", taxSummary.dividends.milUAH],
+    ["Dividends", fmt2(taxSummary.dividends.dividendsUAH)],
+    ["Withholding (div)", fmt2(taxSummary.dividends.withholdingDivUAH)],
+    ["PIT gross", fmt2(taxSummary.dividends.pitGrossUAH)],
+    ["Credit", fmt2(taxSummary.dividends.creditUAH)],
+    ["PIT due", fmt2(taxSummary.dividends.pitDueUAH)],
+    ["MIL due", fmt2(taxSummary.dividends.milUAH)],
     [],
     ["TOTALS"],
-    ["PIT total", taxSummary.totals.pitUAH],
-    ["MIL total", taxSummary.totals.milUAH],
-    ["TOTAL due", taxSummary.totals.totalUAH],
+    ["PIT total", fmt2(taxSummary.totals.pitUAH)],
+    ["MIL total", fmt2(taxSummary.totals.milUAH)],
+    ["TOTAL due", fmt2(taxSummary.totals.totalUAH)],
   ];
   const wsSum = XLSX.utils.aoa_to_sheet(sum);
-  wsSum["!cols"] = [{wch:18},{wch:20}];
+  wsSum["!cols"] = [{wch:24},{wch:24}];
   XLSX.utils.book_append_sheet(wb, wsSum, "Summary");
 
-  // F1
+  // F1 (форматированными строками)
   const f1Head = [
-    [`Додаток Ф1 (розрахунок інвестиційного прибутку) за ${f1.taxYear} рік`],
+    [`Додаток Ф1 за ${f1.taxYear} рік`],
     [],
     ["№","Вид (код)","Найменування та характеристика","Дохід (грн)","Витрати (грн)","Фін. результат (грн)","assetKey"]
   ];
-  const f1Rows = f1.rows.map(r => [r.n, r.assetType, r.name, r.incomeUAH, r.costUAH, r.resultUAH, r.assetKey]);
+  const f1Rows = f1.rows.map(r => [r.n, r.assetType, r.name, fmt2(r.incomeUAH), fmt2(r.costUAH), fmt2(r.resultUAH), r.assetKey]);
   const f1Totals = [
     [],
-    ["","","УСЬОГО", f1.totals.totalIncomeUAH, f1.totals.totalCostUAH, f1.totals.totalResultUAH],
+    ["","","УСЬОГО", fmt2(f1.totals.totalIncomeUAH), fmt2(f1.totals.totalCostUAH), fmt2(f1.totals.totalResultUAH)],
     [],
-    ["Рядок 2", f1.totals.carryLossUAH],
-    ["Рядок 3", f1.totals.netResultUAH],
-    ["Рядок 3.1", f1.totals.netProfitUAH],
-    ["Рядок 3.2", f1.totals.netLossUAH],
+    ["Рядок 2", fmt2(f1.totals.carryLossUAH)],
+    ["Рядок 3", fmt2(f1.totals.netResultUAH)],
+    ["Рядок 3.1", fmt2(f1.totals.netProfitUAH)],
+    ["Рядок 3.2", fmt2(f1.totals.netLossUAH)],
     [],
-    ["ПДФО", f1.investTaxes.pitUAH],
-    ["Військовий збір", f1.investTaxes.milUAH],
+    ["ПДФО", fmt2(f1.investTaxes.pitUAH)],
+    ["Військовий збір", fmt2(f1.investTaxes.milUAH)],
   ];
   const wsF1 = XLSX.utils.aoa_to_sheet([...f1Head, ...f1Rows, ...f1Totals]);
   wsF1["!cols"] = [{wch:6},{wch:10},{wch:65},{wch:18},{wch:18},{wch:18},{wch:38}];
   XLSX.utils.book_append_sheet(wb, wsF1, "F1");
 
-  // Operations
-  const ops = [
-    [`Operations (FIFO matches) ${f1.taxYear}`],
-    [],
-    ["closeDate","assetKey","qtyAbs","incomeUAH","costUAH","resultUAH"],
-    ...f1.operations.map(o => [o.closeDate, o.assetKey, o.qtyAbs, o.incomeUAH, o.costUAH, o.resultUAH])
-  ];
-  const wsOps = XLSX.utils.aoa_to_sheet(ops);
-  wsOps["!cols"] = [{wch:12},{wch:42},{wch:10},{wch:16},{wch:16},{wch:16}];
-  XLSX.utils.book_append_sheet(wb, wsOps, "Operations");
+  // Operations — НЕ обрезаем, делим по листам если нужно
+  const EXCEL_MAX_ROWS = 1048576;
+  const HEADER_ROWS = 3; // title + blank + header
+  const MAX_DATA_PER_SHEET = EXCEL_MAX_ROWS - HEADER_ROWS;
+
+  const opsData = f1.operations;
+  const parts = Math.max(1, Math.ceil(opsData.length / MAX_DATA_PER_SHEET));
+
+  for (let p=0; p<parts; p++) {
+    const from = p * MAX_DATA_PER_SHEET;
+    const to = Math.min(opsData.length, (p+1) * MAX_DATA_PER_SHEET);
+    const slice = opsData.slice(from, to);
+
+    const opsAoA = [
+      [`Operations (FIFO matches) ${f1.taxYear} — part ${p+1}/${parts} (rows ${from+1}-${to})`],
+      [],
+      ["closeDate","assetKey","qtyAbs","incomeUAH","costUAH","resultUAH"],
+      ...slice.map(o => [o.closeDate, o.assetKey, o.qtyAbs, fmt2(o.incomeUAH), fmt2(o.costUAH), fmt2(o.resultUAH)])
+    ];
+    const wsOps = XLSX.utils.aoa_to_sheet(opsAoA);
+    wsOps["!cols"] = [{wch:12},{wch:42},{wch:10},{wch:18},{wch:18},{wch:18}];
+
+    const sheetName = (parts === 1) ? "Operations" : `Ops_${p+1}`;
+    XLSX.utils.book_append_sheet(wb, wsOps, sheetName);
+  }
 
   XLSX.writeFile(wb, `IB_Taxes_${f1.taxYear}_F1.xlsx`);
 }
@@ -1680,18 +1648,16 @@ function updateFxUi() {
   btnDownloadFxLinksFile.disabled = (needs.currencies.length === 0);
   btnClearFx.disabled = (loaded.length === 0);
 
-  // default asOfDate
   $("#asOfDate").value = state.statement.meta.asOfDate || state.statement.meta.periodEnd || `${settings.taxYear}-12-31`;
 }
 
 function updateReadinessUi() {
   const statusCalc = $("#statusCalc");
   const btnCalc = $("#btnCalc");
-  const btnShowLosers = $("#btnShowLosers");
 
   if (!state.statement) {
     btnCalc.disabled = true;
-    btnShowLosers.disabled = true;
+    $("#btnShowLosers").disabled = true;
     setStatus(statusCalc, "Сначала распознайте CSV и подготовьте курсы НБУ.");
     return;
   }
@@ -1704,7 +1670,7 @@ function updateReadinessUi() {
   const canCalc = (needs.currencies.length === 0) || haveAllCurrencies;
 
   btnCalc.disabled = !canCalc;
-  btnShowLosers.disabled = !(fxCurrenciesLoaded().length > 0);
+  $("#btnShowLosers").disabled = !(fxCurrenciesLoaded().length > 0);
 
   if (!canCalc) {
     setStatus(statusCalc, "Не хватает курсов НБУ.\nНажмите “Скачать курсы НБУ” или “Показать ссылки НБУ (fallback)” и загрузите JSON.", "warn");
@@ -1717,7 +1683,6 @@ function updateReadinessUi() {
    Preview render
 ========================= */
 function renderPreview(st) {
-  // KPI dates + currencies
   let minD = null, maxD = null;
   const curSet = new Set();
 
@@ -1788,6 +1753,7 @@ function renderResults(f1, taxSummary) {
   lines.push(`• Прибыль (стр.3.1): ${fmt2(taxSummary.invest.netProfitUAH)}`);
   lines.push(`• ПДФО (инвест): ${fmt2(taxSummary.invest.pitUAH)}`);
   lines.push(`• ВЗ (инвест): ${fmt2(taxSummary.invest.milUAH)}`);
+  lines.push(`• FIFO операций (за год): ${String(f1.operations.length)}`);
   lines.push("");
   lines.push("ДИВИДЕНДЫ (UAH)");
   lines.push(`• Дивиденды: ${fmt2(taxSummary.dividends.dividendsUAH)}`);
@@ -1805,12 +1771,12 @@ function renderResults(f1, taxSummary) {
   setStatus($("#resultsBox"), lines.join("\n"), "good");
 
   renderTable($("#tblF1"), [
-    { label:"№", value:(r)=>r.n, num:true },
-    { label:"Код", value:(r)=>r.assetType, num:true },
+    { label:"№", value:(r)=>r.n },
+    { label:"Код", value:(r)=>r.assetType },
     { label:"Найменування", value:(r)=>r.name },
-    { label:"Доход UAH", value:(r)=>fmt2(r.incomeUAH), num:true },
-    { label:"Витрати UAH", value:(r)=>fmt2(r.costUAH), num:true },
-    { label:"Результат UAH", value:(r)=>fmt2(r.resultUAH), num:true },
+    { label:"Доход UAH", value:(r)=>r.incomeUAH, num:true },
+    { label:"Витрати UAH", value:(r)=>r.costUAH, num:true },
+    { label:"Результат UAH", value:(r)=>r.resultUAH, num:true },
     { label:"assetKey", value:(r)=>r.assetKey },
   ], f1.rows.slice().sort((a,b)=>a.name.localeCompare(b.name)));
 
@@ -1818,9 +1784,9 @@ function renderResults(f1, taxSummary) {
     { label:"CloseDate", value:(r)=>r.closeDate },
     { label:"AssetKey", value:(r)=>r.assetKey },
     { label:"QtyAbs", value:(r)=>r.qtyAbs, num:true },
-    { label:"Income UAH", value:(r)=>fmt2(r.incomeUAH), num:true },
-    { label:"Cost UAH", value:(r)=>fmt2(r.costUAH), num:true },
-    { label:"Result UAH", value:(r)=>fmt2(r.resultUAH), num:true },
+    { label:"Income UAH", value:(r)=>r.incomeUAH, num:true },
+    { label:"Cost UAH", value:(r)=>r.costUAH, num:true },
+    { label:"Result UAH", value:(r)=>r.resultUAH, num:true },
   ], firstN(f1.operations, 300));
 }
 
@@ -1961,19 +1927,13 @@ $("#btnLoadFxFiles").addEventListener("click", async () => {
   try {
     const files = $("#fxFiles").files;
     if (!files || !files.length) {
-      setStatus($("#fxStatus"), "Выберите файлы курсов (JSON), затем нажмите “Подгрузить…”.", "warn");
+      setStatus($("#fxStatus"), "Выберите файлы курсов (JSON), затем нажмите “Подгрузи файлы JSON”.", "warn");
       return;
     }
     setStatus($("#fxStatus"), "Загружаю файлы курсов…");
     await loadFxFromFiles(files, (msg)=>setStatus($("#fxStatus"), msg));
     fxStore.meta.provider = fxStore.meta.provider || "NBU_FILES";
     fxStore.meta.currencies = fxCurrenciesLoaded();
-
-    // При желании: сохранить в localStorage (как кеш)
-    try {
-      const bundle = exportCurrentFxAsBundle(state.fxNeeds);
-      localStorage.setItem("fx_bundle_cache", JSON.stringify(bundle));
-    } catch {}
 
     updateFxUi();
     updateReadinessUi();
@@ -1992,14 +1952,12 @@ $("#btnDownloadFx").addEventListener("click", async () => {
     setStatus($("#fxStatus"), "Готовлю скачивание…");
     const bundle = await downloadNbuFxBundleOnline(needs, (msg)=>setStatus($("#fxStatus"), msg));
 
-    // применяем в память
     loadFxFromBundle(bundle);
     fxStore.meta.provider = "NBU_ONLINE";
     fxStore.meta.range = { start: needs.startIso, end: needs.endIso };
     fxStore.meta.currencies = fxCurrenciesLoaded();
     fxStore.meta.loadedAt = new Date().toISOString();
 
-    // скачиваем файл пользователю
     const fileName = `nbu_fx_${needs.startIso}_${needs.endIso}.json`;
     downloadBlob(fileName, "application/json;charset=utf-8", JSON.stringify(bundle, null, 2));
 
@@ -2008,7 +1966,6 @@ $("#btnDownloadFx").addEventListener("click", async () => {
     setStatus($("#fxStatus"), $("#fxStatus").textContent + `\n\nГотово ✅ Файл скачан: ${fileName}`, "good");
   } catch (e) {
     console.error(e);
-    // показываем ещё и ссылки, чтобы человек сразу видел fallback
     setStatus($("#fxStatus"), (e?.message || String(e)), "bad");
     $("#fxLinksBox").style.display = "block";
     $("#fxLinksBox").innerHTML = buildFxLinksHtml(needs);
@@ -2042,7 +1999,6 @@ $("#btnCalc").addEventListener("click", async () => {
     const f1 = buildF1Model(state.statement, state.assetIndex, fifo.matches, settings);
     state.f1 = f1;
 
-    // dividend taxes
     const divUAH = round2(div.totalUAH);
     const whDivUAH = round2(whDiv.totalUAH);
 
@@ -2100,7 +2056,7 @@ $("#btnCalc").addEventListener("click", async () => {
 
 $("#btnExportCsv").addEventListener("click", () => {
   if (!state.f1) return;
-  exportCsv(state.f1);
+  exportCsvF1AndOps(state.f1);
 });
 $("#btnPrintF1").addEventListener("click", () => {
   if (!state.f1) return;
@@ -2141,9 +2097,9 @@ $("#btnShowLosers").addEventListener("click", async () => {
       { label:"Asset", value:(r)=>r.p.asset.symbolRaw },
       { label:"Qty", value:(r)=>r.p.quantity, num:true },
       { label:"CCY", value:(r)=>r.p.asset.currency },
-      { label:"Unrealized UAH", value:(r)=>fmt2(r.unrealizedUAH), num:true },
-      { label:"Loss UAH", value:(r)=>fmt2(r.lossUAH), num:true },
-      { label:"Оценка экономии налога", value:(r)=>fmt2(r.estTaxSaved), num:true },
+      { label:"Unrealized UAH", value:(r)=>r.unrealizedUAH, num:true },
+      { label:"Loss UAH", value:(r)=>r.lossUAH, num:true },
+      { label:"Оценка экономии налога", value:(r)=>r.estTaxSaved, num:true },
     ];
 
     const box = $("#losersBox");
