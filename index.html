@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="uk">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>IB → Налоги Украина (ПДФО + ВЗ) — v3.1 (FIFO + НБУ)</title>
+  <title>IB → Податки Україна (ПДФО + ВЗ) — v3.2 (FIFO + НБУ)</title>
   <style>
     :root {
       --bg: #0b0f17;
@@ -110,86 +110,92 @@
 
 <body>
 <header>
-  <h1>IB → Налоги Украина (ПДФО + военный сбор) — v3.1 <span class="tag">FIFO + НБУ</span></h1>
+  <h1>IB → Податки Україна (ПДФО + військовий збір) — v3.2 <span class="tag">FIFO + НБУ</span></h1>
   <p>
-    Локальный HTML‑калькулятор: загружаешь CSV из IB → загружаешь/скачиваешь курсы НБУ → получаешь расчёт ПДФО/ВЗ,
-    таблицу Ф1 и экспорт (CSV/XLSX/печать).
-    <span class="tag">⚠️ не налоговая консультация</span>
+    Локальний HTML‑калькулятор: завантажуєш CSV з IB → завантажуєш/скачуєш курси НБУ → отримуєш розрахунок ПДФО/ВЗ,
+    таблицю Ф1 та експорт (CSV/XLSX/друк).
+    <span class="tag">⚠️ не є податковою консультацією</span>
   </p>
 </header>
 
 <main>
   <div class="grid">
-    <!-- STEP 1 -->
+    <!-- КРОК 1 -->
     <section class="card" id="step1">
-      <h2>1) Загрузка отчёта IB и курсов НБУ</h2>
+      <h2>1) Завантаження звіту IB та курсів НБУ</h2>
 
       <div class="field">
-        <label>Загрузите CSV отчёт IB (Flex/Activity, multi-section)</label>
+        <label>Завантажте CSV‑звіт IB (Flex/Activity, multi‑section)</label>
         <input id="fileCsv" type="file" accept=".csv,text/csv" />
       </div>
 
       <div class="btns">
-        <button id="btnParse" disabled>Распознать отчёт</button>
-        <button id="btnReset" class="secondary" disabled>Сбросить</button>
+        <button id="btnParse" disabled>Розпізнати звіт</button>
+        <button id="btnReset" class="secondary" disabled>Скинути</button>
       </div>
 
-      <div id="statusUpload" class="status">Ожидаю CSV…</div>
+      <div id="statusUpload" class="status">Очікую CSV…</div>
 
       <div class="hr"></div>
 
-      <h3>Курсы НБУ для пересчёта в гривну</h3>
+      <h3>Курси НБУ для перерахунку у гривню</h3>
       <div class="small muted">
-        Порядок: ① загрузить CSV → ② “Скачать курсы НБУ” (если не сработало — “Показать ссылки НБУ”, скачать JSON вручную и загрузить).
+        Рекомендований порядок: ① завантажити CSV → ② (якщо є JSON) натиснути “Підвантаж JSON‑файли”
+        або (якщо немає JSON) “Завантажити курси НБУ (і застосувати)”. Якщо онлайн‑завантаження не працює —
+        “Показати посилання НБУ”.
       </div>
 
       <div class="row" style="margin-top:10px;">
         <div class="field">
-          <label>Файлы курсов (поддержка: fx_bundle.json или USD.json/EUR.json из НБУ)</label>
+          <label>JSON‑файли курсів (підтримка: fx_bundle.json або USD.json/EUR.json з НБУ)</label>
           <input id="fxFiles" type="file" accept="application/json,.json" multiple />
         </div>
         <div class="field">
-          <label>Статус курсов</label>
-          <div id="fxStatus" class="status">Сначала распознайте CSV, чтобы понять какие валюты и даты нужны.</div>
+          <label>Статус курсів</label>
+          <div id="fxStatus" class="status">Спочатку розпізнайте CSV, щоб визначити потрібні валюти та дати.</div>
         </div>
       </div>
 
       <div class="btns">
-        <button id="btnDownloadFx" disabled>Скачать курсы НБУ (и применить)</button>
-        <button id="btnShowFxLinks" class="secondary" disabled>Показать ссылки НБУ (fallback)</button>
-        <button id="btnDownloadFxLinksFile" class="secondary" disabled>Скачать файл со ссылками</button>
-        <button id="btnLoadFxFiles" class="secondary">Подгрузи файлы JSON</button>
-        <button id="btnClearFx" class="secondary" disabled>Очистить курсы</button>
+        <!-- ПЕРША -->
+        <button id="btnLoadFxFiles" class="secondary">Підвантаж JSON‑файли</button>
+
+        <!-- ЗАЛИШАЄТЬСЯ “ЗА ЗАМОВЧУВАННЯМ” (основна синя) -->
+        <button id="btnDownloadFx" disabled>Завантажити курси НБУ (і застосувати)</button>
+
+        <button id="btnShowFxLinks" class="secondary" disabled>Показати посилання НБУ (fallback)</button>
+        <button id="btnDownloadFxLinksFile" class="secondary" disabled>Завантажити файл з посиланнями</button>
+        <button id="btnClearFx" class="secondary" disabled>Очистити курси</button>
       </div>
 
       <div id="fxLinksBox" class="status" style="display:none;"></div>
 
       <details style="margin-top:10px;">
-        <summary>Почему “Скачать курсы НБУ” иногда не работает?</summary>
+        <summary>Чому “Завантажити курси НБУ” інколи не працює?</summary>
         <div class="small muted" style="margin-top:8px; line-height:1.5;">
           <ul>
-            <li>Браузер может блокировать запросы к NBU API, особенно если HTML открыт как <span class="mono">file://</span> (origin null) или сеть ограничена.</li>
-            <li>Fallback: <b>“Показать ссылки НБУ”</b> → открыть ссылку → сохранить JSON → загрузить JSON в этот HTML.</li>
-            <li>Ещё вариант: открыть HTML через локальный сервер: <span class="mono">python -m http.server 8000</span> и открыть <span class="mono">http://localhost:8000/ib_ua_tax_v3_1.html</span>.</li>
+            <li>Браузер може блокувати запити до API НБУ, особливо якщо HTML відкрито як <span class="mono">file://</span> (origin null) або мережа обмежена.</li>
+            <li>Fallback завжди працює: <b>“Показати посилання НБУ”</b> → відкрити посилання → зберегти JSON → натиснути <b>“Підвантаж JSON‑файли”</b>.</li>
+            <li>Ще варіант: відкрити HTML через локальний сервер: <span class="mono">python -m http.server 8000</span> і перейти на <span class="mono">http://localhost:8000/ib_ua_tax_v3_2.html</span>.</li>
           </ul>
         </div>
       </details>
     </section>
 
-    <!-- STEP 2 -->
+    <!-- КРОК 2 -->
     <section class="card" id="step2">
-      <h2>2) Настройки расчёта</h2>
+      <h2>2) Налаштування розрахунку</h2>
 
       <div class="row">
         <div class="field">
-          <label>Налоговый год</label>
+          <label>Податковий рік</label>
           <select id="taxYear">
             <option value="2025" selected>2025</option>
             <option value="2024">2024</option>
           </select>
         </div>
         <div class="field">
-          <label>Метод учёта</label>
+          <label>Метод обліку</label>
           <select id="lotMethod">
             <option value="FIFO" selected>FIFO</option>
           </select>
@@ -201,42 +207,42 @@
       <h3>Ставки</h3>
       <div class="row">
         <div class="field">
-          <label>ПДФО на инвестприбыль (например, 0.18)</label>
+          <label>ПДФО на інвестприбуток (наприклад, 0.18)</label>
           <input id="pitInvestRate" type="number" step="0.01" value="0.18" />
         </div>
         <div class="field">
-          <label>Военный сбор на инвестприбыль (например, 0.05)</label>
+          <label>Військовий збір на інвестприбуток (наприклад, 0.05)</label>
           <input id="milInvestRate" type="number" step="0.01" value="0.05" />
         </div>
       </div>
 
       <div class="row">
         <div class="field">
-          <label>ПДФО на дивиденды нерезидента (например, 0.09)</label>
+          <label>ПДФО на дивіденди нерезидента (наприклад, 0.09)</label>
           <input id="pitDivRate" type="number" step="0.01" value="0.09" />
         </div>
         <div class="field">
-          <label>Военный сбор на дивиденды (например, 0.05)</label>
+          <label>Військовий збір на дивіденди (наприклад, 0.05)</label>
           <input id="milDivRate" type="number" step="0.01" value="0.05" />
         </div>
       </div>
 
       <div class="row">
         <div class="field">
-          <label>Переносимый инвестубыток прошлых лет (UAH)</label>
+          <label>Перенесений інвестзбиток минулих років (UAH)</label>
           <input id="carryLossUAH" type="number" step="0.01" value="0" />
         </div>
         <div class="field">
-          <label>Код вида инвестактива для Ф1</label>
+          <label>Код виду інвестактиву для Ф1</label>
           <select id="f1AssetTypeMode">
-            <option value="ALL_4" selected>По умолчанию: всё = 4 (иностранные источники)</option>
-            <option value="MANUAL">Ручная карта (в JSON ниже)</option>
+            <option value="ALL_4" selected>За замовчуванням: усе = 4 (іноземні джерела)</option>
+            <option value="MANUAL">Ручна мапа (JSON нижче)</option>
           </select>
         </div>
       </div>
 
       <div class="field" id="manualMapWrap" style="display:none;">
-        <label>Ручная карта кодов Ф1 (JSON: {"ASSETKEY":4, ...})</label>
+        <label>Ручна мапа кодів Ф1 (JSON: {"ASSETKEY":4, ...})</label>
         <textarea id="f1ManualMap" spellcheck="false">{}</textarea>
       </div>
 
@@ -245,34 +251,34 @@
       <div class="field">
         <label>
           <input id="useForeignTaxCredit" type="checkbox" />
-          Учитывать зачёт иностранного налога по дивидендам (уменьшает ПДФО, НЕ уменьшает ВЗ)
+          Враховувати залік іноземного податку за дивідендами (зменшує ПДФО, НЕ зменшує ВЗ)
         </label>
       </div>
 
       <div class="field">
         <label>
           <input id="treatPILasDividend" type="checkbox" checked />
-          “Payment in Lieu of Dividend” считать дивидендами
+          “Payment in Lieu of Dividend” вважати дивідендами
         </label>
       </div>
 
       <div class="btns">
-        <button id="btnCalc" disabled>Рассчитать налоги + сформировать Ф1</button>
+        <button id="btnCalc" disabled>Розрахувати податки + сформувати Ф1</button>
       </div>
 
-      <div id="statusCalc" class="status">Сначала распознайте CSV и подготовьте курсы НБУ.</div>
+      <div id="statusCalc" class="status">Спочатку розпізнайте CSV та підготуйте курси НБУ.</div>
     </section>
   </div>
 
-  <!-- STEP 3 -->
+  <!-- КРОК 3 -->
   <section class="card" id="step3">
-    <h2>3) Предпросмотр распознанных данных</h2>
+    <h2>3) Попередній перегляд розпізнаних даних</h2>
 
     <div class="kpi">
-      <div class="box"><div class="t">Диапазон дат в файле</div><div class="v" id="kpiDates">—</div></div>
-      <div class="box"><div class="t">Валюты в файле</div><div class="v" id="kpiCurrencies">—</div></div>
-      <div class="box"><div class="t">Trades</div><div class="v" id="kpiTrades">—</div></div>
-      <div class="box"><div class="t">Div / Withholding / Open Pos</div><div class="v" id="kpiOther">—</div></div>
+      <div class="box"><div class="t">Діапазон дат у файлі</div><div class="v" id="kpiDates">—</div></div>
+      <div class="box"><div class="t">Валюти у файлі</div><div class="v" id="kpiCurrencies">—</div></div>
+      <div class="box"><div class="t">Угоди (Trades)</div><div class="v" id="kpiTrades">—</div></div>
+      <div class="box"><div class="t">Дивіденди / Утримання / Відкриті позиції</div><div class="v" id="kpiOther">—</div></div>
     </div>
 
     <div class="hr"></div>
@@ -280,82 +286,83 @@
     <div id="warningsBox" class="status warn" style="display:none;"></div>
 
     <details>
-      <summary>Превью Trades (первые 200)</summary>
+      <summary>Прев’ю угод (Trades) — перші 200</summary>
       <div class="tableWrap"><table id="tblTrades"></table></div>
     </details>
 
     <details style="margin-top:10px;">
-      <summary>Превью Dividends (первые 200)</summary>
+      <summary>Прев’ю дивідендів — перші 200</summary>
       <div class="tableWrap"><table id="tblDiv"></table></div>
     </details>
 
     <details style="margin-top:10px;">
-      <summary>Превью Withholding Tax (первые 200)</summary>
+      <summary>Прев’ю утримань податку (Withholding Tax) — перші 200</summary>
       <div class="tableWrap"><table id="tblWh"></table></div>
     </details>
 
     <details style="margin-top:10px;">
-      <summary>Превью Open Positions (первые 200)</summary>
+      <summary>Прев’ю відкритих позицій — перші 200</summary>
       <div class="tableWrap"><table id="tblPos"></table></div>
     </details>
 
     <div class="btns">
-      <button id="btnDownloadParsed" class="secondary" disabled>Скачать распознанный Statement (JSON)</button>
+      <button id="btnDownloadParsed" class="secondary" disabled>Завантажити розпізнаний Statement (JSON)</button>
     </div>
   </section>
 
-  <!-- STEP 4 -->
+  <!-- КРОК 4 -->
   <section class="card" id="step4">
-    <h2>4) Результаты расчёта (UAH)</h2>
+    <h2>4) Результати розрахунку (UAH)</h2>
 
-    <div id="resultsBox" class="status">Пока нет расчёта.</div>
+    <div id="resultsBox" class="status">Поки що немає розрахунку.</div>
 
     <details style="margin-top:10px;">
-      <summary>Таблица Ф1 (агрегировано по активам)</summary>
+      <summary>Таблиця Ф1 (агрегація за активами)</summary>
       <div class="tableWrap"><table id="tblF1"></table></div>
     </details>
 
     <details style="margin-top:10px;">
-      <summary>Operations (FIFO matches, показано первые 300)</summary>
+      <summary>Операції (FIFO‑зіставлення) — показано перші 300</summary>
       <div class="tableWrap"><table id="tblOps"></table></div>
     </details>
 
     <div class="btns">
-      <button id="btnExportXlsx" disabled>Скачать XLSX (F1 + Ops + Summary)</button>
-      <button id="btnExportCsv" class="secondary" disabled>Скачать CSV (F1 + Ops)</button>
-      <button id="btnPrintF1" class="secondary" disabled>Открыть печатную форму Ф1</button>
-      <button id="btnDownloadDebug" class="secondary" disabled>Скачать DEBUG (JSON)</button>
+      <button id="btnExportXlsx" disabled>Завантажити XLSX (Ф1 + Операції + Підсумок)</button>
+      <button id="btnExportCsv" class="secondary" disabled>Завантажити CSV (Ф1 + Операції)</button>
+      <button id="btnPrintF1" class="secondary" disabled>Відкрити друковану форму Ф1</button>
+      <button id="btnDownloadDebug" class="secondary" disabled>Завантажити DEBUG (JSON)</button>
     </div>
 
     <div class="small muted" style="margin-top:8px;">
-      XLSX экспорт использует SheetJS через CDN (если интернет недоступен — пользуйтесь CSV или печатной формой).
+      XLSX‑експорт використовує SheetJS через CDN (якщо інтернет недоступний — користуйтеся CSV або друком).
     </div>
   </section>
 
-  <!-- STEP 5 -->
+  <!-- КРОК 5 -->
   <section class="card" id="step5">
-    <h2>5) Открытые позиции: где сейчас наибольшие убытки (по отчёту)</h2>
+    <h2>5) Відкриті позиції: де зараз найбільші збитки (за звітом)</h2>
     <div class="small muted">
-      Подсказка: какие позиции сейчас в наибольшем минусе в гривне (по Unrealized P/L из IB и курсу НБУ).
+      Підказка: які позиції зараз у найбільшому мінусі у гривні (за Unrealized P/L зі звіту IB та курсом НБУ).
+      Це не інвестпорада.
     </div>
 
     <div class="row" style="margin-top:10px;">
       <div class="field">
-        <label>Дата FX для конвертации (по умолчанию = конец периода отчёта)</label>
+        <label>Дата FX для конвертації (за замовчуванням = кінець періоду звіту)</label>
         <input id="asOfDate" type="text" placeholder="YYYY-MM-DD" />
-        <div class="small muted">Unrealized P/L берётся из отчёта; меняя дату вы меняете только FX‑курс.</div>
+        <div class="small muted">Unrealized P/L береться зі звіту; змінюючи дату, ви змінюєте лише FX‑курс.</div>
       </div>
       <div class="field">
-        <label>Показать топ N убыточных позиций</label>
+        <label>Показати топ N збиткових позицій</label>
         <input id="topN" type="number" step="1" value="15" />
       </div>
     </div>
 
     <div class="btns">
-      <button id="btnShowLosers" disabled>Показать</button>
+      <button id="btnShowLosers" disabled>Показати</button>
     </div>
 
-    <div id="losersBox" class="status">Пока нет данных.</div>
+    <div id="losersBox" class="status">Поки що немає даних.</div>
   </section>
 </main>
 
@@ -380,7 +387,7 @@ function setStatus(el, msg, kind="") {
 }
 
 /**
- * Формат денег: 1'000.00 (2 знака, разделитель тысяч апострофом)
+ * Формат: 1'000.00 (2 знаки, розділювач тисяч — апостроф)
  */
 function fmt2(x) {
   if (!Number.isFinite(x)) return "—";
@@ -630,7 +637,7 @@ function parseFlexReport(rows, fileName) {
           st.meta.periodEnd = pr.end;
           st.meta.asOfDate = pr.end;
         } else {
-          warn(st, "UNPARSEABLE_META", `Не удалось распознать Period: ${fv}`, { section, row: rowIndex+1 });
+          warn(st, "UNPARSEABLE_META", `Не вдалося розпізнати Period: ${fv}`, { section, row: rowIndex+1 });
         }
       }
       if (fn === "WhenGenerated") st.meta.generatedAt = fv;
@@ -758,10 +765,11 @@ function parseFlexReport(rows, fileName) {
       st.meta.periodStart = a;
       st.meta.periodEnd = b;
       st.meta.asOfDate = b;
-      warn(st, "META_FROM_FILENAME", `Период взят из имени файла: ${a} — ${b}`);
+      warn(st, "META_FROM_FILENAME", `Період взято з назви файлу: ${a} — ${b}`);
     }
   }
 
+  // попередження для FIFO: перша угода по активу — SELL
   const byAsset = new Map();
   const sorted = st.trades.slice().sort((a,b)=>a.dateTime.localeCompare(b.dateTime));
   for (const t of sorted) {
@@ -772,7 +780,7 @@ function parseFlexReport(rows, fileName) {
     const first = arr[0];
     if (first && first.quantity < 0) {
       warn(st, "INSUFFICIENT_HISTORY_FOR_FIFO",
-        `Актив ${assetKey}: первая сделка в файле — SELL. Если это не шорт, для корректного FIFO нужна более ранняя история.`,
+        `Актив ${assetKey}: перша угода у файлі — SELL. Якщо це не шорт, для коректного FIFO потрібна більш рання історія.`,
         { assetKey }
       );
     }
@@ -835,12 +843,12 @@ function humanNameFromAssetKey(assetIndex, assetKey) {
   if (!m) return assetKey;
   if (m.kind === "STOCK") {
     const isinPart = m.isin ? ` (ISIN ${m.isin})` : "";
-    return `Акции/ETF: ${m.symbol ?? assetKey}${isinPart}, ${m.currency}`;
+    return `Акції/ETF: ${m.symbol ?? assetKey}${isinPart}, ${m.currency}`;
   }
   if (m.kind === "OPTION") {
     const cp = m.right === "C" ? "Call" : "Put";
     const mult = m.multiplier ? `, ×${m.multiplier}` : "";
-    return `Опцион ${cp} на ${m.underlying}, exp ${m.expiry}, strike ${m.strike}${mult}, ${m.currency}`;
+    return `Опціон ${cp} на ${m.underlying}, exp ${m.expiry}, strike ${m.strike}${mult}, ${m.currency}`;
   }
   return assetKey;
 }
@@ -913,12 +921,12 @@ function loadFxFromBundle(bundle) {
   fxStore.meta.loadedAt = new Date().toISOString();
 }
 function loadFxFromNbuArray(nbuArray) {
-  if (!Array.isArray(nbuArray)) throw new Error("NBU JSON: ожидаю массив.");
+  if (!Array.isArray(nbuArray)) throw new Error("JSON НБУ: очікую масив.");
   let ccy = null;
   for (const it of nbuArray) {
     if (it && it.cc) { ccy = String(it.cc).toUpperCase(); break; }
   }
-  if (!ccy) throw new Error("NBU JSON: не найден код валюты (поле cc).");
+  if (!ccy) throw new Error("JSON НБУ: не знайдено код валюти (поле cc).");
 
   const mp = fxStore.maps.get(ccy) ?? new Map();
   for (const it of nbuArray) {
@@ -934,7 +942,7 @@ function loadFxFromNbuArray(nbuArray) {
 }
 
 async function loadFxFromFiles(files, progressCb) {
-  if (!files || !files.length) throw new Error("Не выбраны файлы курсов.");
+  if (!files || !files.length) throw new Error("Не обрано JSON‑файли курсів.");
   const progress = progressCb || (()=>{});
   let loadedBundle = false;
 
@@ -943,22 +951,22 @@ async function loadFxFromFiles(files, progressCb) {
     const text = await f.text();
     let data;
     try { data = JSON.parse(text); }
-    catch { throw new Error(`Файл ${f.name}: это не JSON.`); }
+    catch { throw new Error(`Файл ${f.name}: це не JSON.`); }
 
     if (data && data.format === "fx_bundle_v1" && data.currencies) {
       loadFxFromBundle(data);
       loadedBundle = true;
-      progress(`Загружен bundle: валют ${fxCurrenciesLoaded().join(", ") || "—"}`);
+      progress(`Завантажено bundle: валюти ${fxCurrenciesLoaded().join(", ") || "—"}`);
       continue;
     }
 
     if (Array.isArray(data)) {
       loadFxFromNbuArray(data);
-      progress(`Загружено (raw NBU): ${fxCurrenciesLoaded().join(", ")}`);
+      progress(`Завантажено (raw НБУ): ${fxCurrenciesLoaded().join(", ")}`);
       continue;
     }
 
-    throw new Error(`Файл ${f.name}: неизвестный формат (ожидаю fx_bundle_v1 или raw массив НБУ).`);
+    throw new Error(`Файл ${f.name}: невідомий формат (очікую fx_bundle_v1 або raw‑масив НБУ).`);
   }
 
   if (!loadedBundle) {
@@ -977,7 +985,7 @@ async function downloadNbuFxBundleOnline(needs, progressCb) {
   };
 
   for (const ccy of needs.currencies) {
-    progress(`Скачиваю ${ccy}…`);
+    progress(`Завантажую ${ccy}…`);
     const url = buildNbuRangeUrl(ccy, needs.startIso, needs.endIso);
 
     let res;
@@ -985,10 +993,10 @@ async function downloadNbuFxBundleOnline(needs, progressCb) {
       res = await fetch(url);
     } catch (e) {
       throw new Error(
-        `Не удалось скачать курсы НБУ автоматически (Failed to fetch).\n\n` +
-        `Что делать:\n` +
-        `1) Нажмите “Показать ссылки НБУ (fallback)” и скачайте JSON вручную\n` +
-        `2) Или откройте HTML через http://localhost (python -m http.server)\n\n` +
+        `Не вдалося завантажити курси НБУ автоматично (Failed to fetch).\n\n` +
+        `Що робити:\n` +
+        `1) Натисніть “Показати посилання НБУ (fallback)” і збережіть JSON вручну\n` +
+        `2) Або відкрийте HTML через http://localhost (python -m http.server)\n\n` +
         `URL: ${url}`
       );
     }
@@ -1003,12 +1011,12 @@ async function downloadNbuFxBundleOnline(needs, progressCb) {
       if (!Number.isFinite(rate)) continue;
       map[iso] = rate;
     }
-    if (Object.keys(map).length === 0) throw new Error(`НБУ: пустые данные для ${ccy}.`);
+    if (Object.keys(map).length === 0) throw new Error(`НБУ: порожні дані для ${ccy}.`);
 
     bundle.currencies[ccy] = map;
   }
 
-  progress(`Готово ✅ Скачано валют: ${Object.keys(bundle.currencies).length}`);
+  progress(`Готово ✅ Завантажено валют: ${Object.keys(bundle.currencies).length}`);
   return bundle;
 }
 
@@ -1062,13 +1070,13 @@ function buildFxLinksHtml(needs) {
   });
 
   const intro = [
-    `<b>Ссылки НБУ (JSON)</b><br/>`,
-    `Диапазон: <span class="mono">${escapeHtml(needs.startIso)} → ${escapeHtml(needs.endIso)}</span><br/>`,
-    `Валюты: <span class="mono">${escapeHtml(needs.currencies.join(", ") || "—")}</span><br/><br/>`,
-    `<b>Как сделать оффлайн-курсы:</b><br/>`,
-    `1) Откройте каждую ссылку<br/>`,
-    `2) Сохраните JSON (например USD.json, EUR.json)<br/>`,
-    `3) Загрузите JSON файлы и нажмите “Подгрузи файлы JSON”<br/><br/>`,
+    `<b>Посилання НБУ (JSON)</b><br/>`,
+    `Діапазон: <span class="mono">${escapeHtml(needs.startIso)} → ${escapeHtml(needs.endIso)}</span><br/>`,
+    `Валюти: <span class="mono">${escapeHtml(needs.currencies.join(", ") || "—")}</span><br/><br/>`,
+    `<b>Як зробити офлайн‑курси:</b><br/>`,
+    `1) Відкрийте кожне посилання<br/>`,
+    `2) Збережіть JSON (наприклад USD.json, EUR.json)<br/>`,
+    `3) Оберіть JSON‑файли та натисніть “Підвантаж JSON‑файли”<br/><br/>`,
   ].join("");
 
   return intro + items.join("<br/>");
@@ -1076,13 +1084,13 @@ function buildFxLinksHtml(needs) {
 function downloadFxLinksFile(needs) {
   const html = `
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8" />
+<html lang="uk"><head><meta charset="utf-8" />
 <title>NBU FX links</title></head>
 <body style="font-family:Arial,sans-serif;">
-  <h2>Ссылки НБУ (JSON)</h2>
-  <p><b>Диапазон:</b> ${needs.startIso} → ${needs.endIso}</p>
-  <p><b>Валюты:</b> ${needs.currencies.join(", ")}</p>
-  <p>Откройте каждую ссылку, сохраните JSON (USD.json/EUR.json...), затем загрузите их в калькулятор.</p>
+  <h2>Посилання НБУ (JSON)</h2>
+  <p><b>Діапазон:</b> ${needs.startIso} → ${needs.endIso}</p>
+  <p><b>Валюти:</b> ${needs.currencies.join(", ")}</p>
+  <p>Відкрийте кожне посилання, збережіть JSON (USD.json/EUR.json...), потім завантажте їх у калькулятор.</p>
   <ul>
     ${needs.currencies.map(ccy => {
       const url = buildNbuRangeUrl(ccy, needs.startIso, needs.endIso);
@@ -1117,7 +1125,7 @@ function assertFxCoverage(statement, taxYear) {
   const problems = [];
   for (const [ccy, set] of needDates.entries()) {
     if (!fxStore.maps.has(ccy)) {
-      problems.push({ ccy, date: "(нет данных по валюте)" });
+      problems.push({ ccy, date: "(немає даних по валюті)" });
       if (problems.length >= 25) break;
       continue;
     }
@@ -1134,12 +1142,12 @@ function assertFxCoverage(statement, taxYear) {
   if (problems.length) {
     const examples = problems.map(x => `${x.ccy} @ ${x.date}`).join(", ");
     throw new Error(
-      "Курсы загружены не полностью: нет ставок для некоторых валют/дат.\n" +
-      "Примеры: " + examples + "\n\n" +
-      "Что делать:\n" +
-      "• Нажмите “Показать ссылки НБУ (fallback)”\n" +
-      "• Скачайте JSON по нужным валютам на указанный диапазон\n" +
-      "• Загрузите JSON и повторите расчёт"
+      "Курси завантажені не повністю: немає ставок для деяких валют/дат.\n" +
+      "Приклади: " + examples + "\n\n" +
+      "Що робити:\n" +
+      "• Натисніть “Показати посилання НБУ (fallback)”\n" +
+      "• Збережіть JSON по потрібних валютах на вказаний діапазон\n" +
+      "• Натисніть “Підвантаж JSON‑файли” та повторіть розрахунок"
     );
   }
 }
@@ -1163,7 +1171,7 @@ async function fifoInUAH(trades) {
     const date = tr.tradeDate;
 
     const rate = fxRateSync(tr.asset.currency, date);
-    if (!rate) throw new Error(`Нет курса для ${tr.asset.currency} на ${date}.`);
+    if (!rate) throw new Error(`Немає курсу для ${tr.asset.currency} на ${date}.`);
 
     let qtyRem = tr.quantity;
     let cashRemUAH = tr.netCash * rate;
@@ -1316,7 +1324,7 @@ async function computeDividendsUAH(statement, settings) {
   let totalUAH = 0;
   for (const d of div) {
     const r = fxRateSync(d.currency, d.date);
-    if (!r) throw new Error(`Нет курса для ${d.currency} на ${d.date} (дивиденды).`);
+    if (!r) throw new Error(`Немає курсу для ${d.currency} на ${d.date} (дивіденди).`);
     totalUAH += d.amount * r;
   }
   return { items: div, totalUAH: totalUAH };
@@ -1335,7 +1343,7 @@ async function computeWithholdingOnDivUAH(statement, settings) {
   let totalUAH = 0;
   for (const w of items) {
     const r = fxRateSync(w.currency, w.date);
-    if (!r) throw new Error(`Нет курса для ${w.currency} на ${w.date} (withholding).`);
+    if (!r) throw new Error(`Немає курсу для ${w.currency} на ${w.date} (утримання).`);
     totalUAH += Math.abs(w.amount) * r;
   }
   return { items, totalUAH };
@@ -1375,17 +1383,16 @@ async function ensureSheetJS() {
 function exportCsvF1AndOps(f1) {
   // F1
   const f1Rows = [
-    ["n","assetType","name","incomeUAH","costUAH","resultUAH","assetKey"],
+    ["№","Код","Найменування","Дохід (грн)","Витрати (грн)","Результат (грн)","assetKey"],
     ...f1.rows.map(r => [r.n, r.assetType, r.name, fmt2(r.incomeUAH), fmt2(r.costUAH), fmt2(r.resultUAH), r.assetKey])
   ];
   downloadBlob(`F1_${f1.taxYear}.csv`, "text/csv;charset=utf-8", toCsv(f1Rows));
 
-  // Operations (может быть очень много → делим на части)
-  const header = ["closeDate","assetKey","qtyAbs","incomeUAH","costUAH","resultUAH"];
+  // Operations — може бути дуже багато → ділимо на частини
+  const header = ["Дата закриття","assetKey","К-ть (abs)","Дохід (грн)","Витрати (грн)","Результат (грн)"];
   const dataRows = f1.operations.map(o => [o.closeDate, o.assetKey, o.qtyAbs, fmt2(o.incomeUAH), fmt2(o.costUAH), fmt2(o.resultUAH)]);
 
-  // Практический лимит, чтобы не упереться в Excel/память при открытии:
-  const MAX_DATA_ROWS_PER_FILE = 900000; // данные (без заголовка)
+  const MAX_DATA_ROWS_PER_FILE = 900000;
   if (dataRows.length <= MAX_DATA_ROWS_PER_FILE) {
     downloadBlob(`Operations_${f1.taxYear}.csv`, "text/csv;charset=utf-8", toCsv([header, ...dataRows]));
   } else {
@@ -1412,7 +1419,7 @@ function exportPrintableF1(f1) {
   const html = `
 <!doctype html>
 <html lang="uk"><head><meta charset="utf-8" />
-<title>F1 ${f1.taxYear}</title>
+<title>Ф1 ${f1.taxYear}</title>
 <style>
   body { font-family: Arial, sans-serif; font-size: 12px; }
   h1 { font-size: 16px; margin: 0 0 10px 0; }
@@ -1459,7 +1466,7 @@ function exportPrintableF1(f1) {
 <p><b>Військовий збір:</b> ${escapeHtml(fmt2(f1.investTaxes.milUAH))} грн</p>
 </body></html>`;
   const w = window.open("", "_blank");
-  if (!w) throw new Error("Popup blocked (разрешите всплывающие окна).");
+  if (!w) throw new Error("Блокування спливаючих вікон (дозвольте pop‑up).");
   w.document.open();
   w.document.write(html);
   w.document.close();
@@ -1468,45 +1475,45 @@ function exportPrintableF1(f1) {
 async function exportXlsx(statement, f1, taxSummary) {
   const ok = await ensureSheetJS();
   if (!ok || !window.XLSX) {
-    alert("Не удалось загрузить библиотеку XLSX (возможно, нет интернета). Используйте CSV или печать.");
+    alert("Не вдалося завантажити бібліотеку XLSX (можливо, немає інтернету). Використайте CSV або друк.");
     return;
   }
   const XLSX = window.XLSX;
   const wb = XLSX.utils.book_new();
 
-  // Summary (всё уже форматированными строками, как просили)
+  // Summary
   const sum = [
-    [`Summary ${f1.taxYear}`],
+    [`Підсумок ${f1.taxYear}`],
     [],
-    ["ИНВЕСТРЕЗУЛЬТАТ (FIFO, UAH)"],
-    ["Income", fmt2(taxSummary.invest.incomeUAH)],
-    ["Cost", fmt2(taxSummary.invest.costUAH)],
-    ["Result", fmt2(taxSummary.invest.resultUAH)],
-    ["CarryLoss", fmt2(taxSummary.invest.carryLossUAH)],
-    ["NetResult", fmt2(taxSummary.invest.netResultUAH)],
-    ["NetProfit", fmt2(taxSummary.invest.netProfitUAH)],
-    ["PIT", fmt2(taxSummary.invest.pitUAH)],
-    ["MIL", fmt2(taxSummary.invest.milUAH)],
-    ["FIFO operations (year)", String(f1.operations.length)],
+    ["ІНВЕСТ‑РЕЗУЛЬТАТ (FIFO, грн)"],
+    ["Дохід", fmt2(taxSummary.invest.incomeUAH)],
+    ["Витрати", fmt2(taxSummary.invest.costUAH)],
+    ["Фінрезультат", fmt2(taxSummary.invest.resultUAH)],
+    ["Перенесений збиток", fmt2(taxSummary.invest.carryLossUAH)],
+    ["Підсумок (ряд.3)", fmt2(taxSummary.invest.netResultUAH)],
+    ["Прибуток (ряд.3.1)", fmt2(taxSummary.invest.netProfitUAH)],
+    ["ПДФО (інвест)", fmt2(taxSummary.invest.pitUAH)],
+    ["ВЗ (інвест)", fmt2(taxSummary.invest.milUAH)],
+    ["К-ть FIFO‑операцій (за рік)", String(f1.operations.length)],
     [],
-    ["ДИВИДЕНДЫ (UAH)"],
-    ["Dividends", fmt2(taxSummary.dividends.dividendsUAH)],
-    ["Withholding (div)", fmt2(taxSummary.dividends.withholdingDivUAH)],
-    ["PIT gross", fmt2(taxSummary.dividends.pitGrossUAH)],
-    ["Credit", fmt2(taxSummary.dividends.creditUAH)],
-    ["PIT due", fmt2(taxSummary.dividends.pitDueUAH)],
-    ["MIL due", fmt2(taxSummary.dividends.milUAH)],
+    ["ДИВІДЕНДИ (грн)"],
+    ["Дивіденди", fmt2(taxSummary.dividends.dividendsUAH)],
+    ["Утримано (div)", fmt2(taxSummary.dividends.withholdingDivUAH)],
+    ["ПДФО (gross)", fmt2(taxSummary.dividends.pitGrossUAH)],
+    ["Залік", fmt2(taxSummary.dividends.creditUAH)],
+    ["ПДФО до сплати", fmt2(taxSummary.dividends.pitDueUAH)],
+    ["ВЗ до сплати", fmt2(taxSummary.dividends.milUAH)],
     [],
-    ["TOTALS"],
-    ["PIT total", fmt2(taxSummary.totals.pitUAH)],
-    ["MIL total", fmt2(taxSummary.totals.milUAH)],
-    ["TOTAL due", fmt2(taxSummary.totals.totalUAH)],
+    ["РАЗОМ"],
+    ["ПДФО всього", fmt2(taxSummary.totals.pitUAH)],
+    ["ВЗ всього", fmt2(taxSummary.totals.milUAH)],
+    ["Всього до сплати", fmt2(taxSummary.totals.totalUAH)],
   ];
   const wsSum = XLSX.utils.aoa_to_sheet(sum);
-  wsSum["!cols"] = [{wch:24},{wch:24}];
+  wsSum["!cols"] = [{wch:30},{wch:28}];
   XLSX.utils.book_append_sheet(wb, wsSum, "Summary");
 
-  // F1 (форматированными строками)
+  // F1
   const f1Head = [
     [`Додаток Ф1 за ${f1.taxYear} рік`],
     [],
@@ -1529,9 +1536,9 @@ async function exportXlsx(statement, f1, taxSummary) {
   wsF1["!cols"] = [{wch:6},{wch:10},{wch:65},{wch:18},{wch:18},{wch:18},{wch:38}];
   XLSX.utils.book_append_sheet(wb, wsF1, "F1");
 
-  // Operations — НЕ обрезаем, делим по листам если нужно
+  // Operations — не обрізаємо: ділимо по листах
   const EXCEL_MAX_ROWS = 1048576;
-  const HEADER_ROWS = 3; // title + blank + header
+  const HEADER_ROWS = 3;
   const MAX_DATA_PER_SHEET = EXCEL_MAX_ROWS - HEADER_ROWS;
 
   const opsData = f1.operations;
@@ -1543,15 +1550,15 @@ async function exportXlsx(statement, f1, taxSummary) {
     const slice = opsData.slice(from, to);
 
     const opsAoA = [
-      [`Operations (FIFO matches) ${f1.taxYear} — part ${p+1}/${parts} (rows ${from+1}-${to})`],
+      [`Операції (FIFO‑зіставлення) ${f1.taxYear} — частина ${p+1}/${parts} (рядки ${from+1}-${to})`],
       [],
-      ["closeDate","assetKey","qtyAbs","incomeUAH","costUAH","resultUAH"],
+      ["Дата закриття","assetKey","К-ть (abs)","Дохід (грн)","Витрати (грн)","Результат (грн)"],
       ...slice.map(o => [o.closeDate, o.assetKey, o.qtyAbs, fmt2(o.incomeUAH), fmt2(o.costUAH), fmt2(o.resultUAH)])
     ];
     const wsOps = XLSX.utils.aoa_to_sheet(opsAoA);
-    wsOps["!cols"] = [{wch:12},{wch:42},{wch:10},{wch:18},{wch:18},{wch:18}];
+    wsOps["!cols"] = [{wch:12},{wch:42},{wch:12},{wch:18},{wch:18},{wch:18}];
 
-    const sheetName = (parts === 1) ? "Operations" : `Ops_${p+1}`;
+    const sheetName = (parts === 1) ? "Ops" : `Ops_${p+1}`;
     XLSX.utils.book_append_sheet(wb, wsOps, sheetName);
   }
 
@@ -1592,6 +1599,18 @@ const state = {
   fxNeeds: null,
 };
 
+function buildF1ModeFromUI() {
+  const mode = $("#f1AssetTypeMode").value;
+  if (mode === "MANUAL") {
+    try {
+      const m = JSON.parse($("#f1ManualMap").value || "{}");
+      return { mode: "MANUAL", map: m };
+    } catch {
+      return { mode: "MANUAL", map: {} };
+    }
+  }
+  return { mode: "ALL_4" };
+}
 function readSettings() {
   return {
     taxYear: Number($("#taxYear").value),
@@ -1614,7 +1633,7 @@ function updateFxUi() {
   const btnClearFx = $("#btnClearFx");
 
   if (!state.statement) {
-    setStatus(fxStatus, "Сначала распознайте CSV, чтобы понять какие валюты и даты нужны.");
+    setStatus(fxStatus, "Спочатку розпізнайте CSV, щоб визначити потрібні валюти та дати.");
     btnDownloadFx.disabled = true;
     btnShowFxLinks.disabled = true;
     btnDownloadFxLinksFile.disabled = true;
@@ -1632,11 +1651,11 @@ function updateFxUi() {
   const rangeText = `${needs.startIso} → ${needs.endIso}`;
 
   const msg = [
-    `Нужно валют: ${needText}`,
-    `Диапазон: ${rangeText}`,
+    `Потрібні валюти: ${needText}`,
+    `Діапазон: ${rangeText}`,
     ``,
-    `Загружено валют: ${loadedText}`,
-    `Источник: ${fxStore.meta.provider || "—"}`,
+    `Завантажено валют: ${loadedText}`,
+    `Джерело: ${fxStore.meta.provider || "—"}`,
   ].join("\n");
 
   const readyByCurrency = needs.currencies.every(c => fxStore.maps.has(String(c).toUpperCase()));
@@ -1658,7 +1677,7 @@ function updateReadinessUi() {
   if (!state.statement) {
     btnCalc.disabled = true;
     $("#btnShowLosers").disabled = true;
-    setStatus(statusCalc, "Сначала распознайте CSV и подготовьте курсы НБУ.");
+    setStatus(statusCalc, "Спочатку розпізнайте CSV та підготуйте курси НБУ.");
     return;
   }
 
@@ -1673,9 +1692,9 @@ function updateReadinessUi() {
   $("#btnShowLosers").disabled = !(fxCurrenciesLoaded().length > 0);
 
   if (!canCalc) {
-    setStatus(statusCalc, "Не хватает курсов НБУ.\nНажмите “Скачать курсы НБУ” или “Показать ссылки НБУ (fallback)” и загрузите JSON.", "warn");
+    setStatus(statusCalc, "Не вистачає курсів НБУ.\nНатисніть “Завантажити курси НБУ (і застосувати)” або “Показати посилання НБУ”, збережіть JSON і натисніть “Підвантаж JSON‑файли”.", "warn");
   } else {
-    setStatus(statusCalc, "Готово к расчёту ✅ Нажмите “Рассчитать налоги + сформировать Ф1”.", "good");
+    setStatus(statusCalc, "Готово до розрахунку ✅ Натисніть “Розрахувати податки + сформувати Ф1”.", "good");
   }
 }
 
@@ -1698,43 +1717,43 @@ function renderPreview(st) {
 
   if (st.warnings && st.warnings.length) {
     const lines = st.warnings.slice(0, 30).map(w => `• [${w.code}] ${w.message}`);
-    if (st.warnings.length > 30) lines.push(`… и ещё ${st.warnings.length - 30}`);
+    if (st.warnings.length > 30) lines.push(`… і ще ${st.warnings.length - 30}`);
     $("#warningsBox").style.display = "block";
-    setStatus($("#warningsBox"), "Предупреждения:\n" + lines.join("\n"), "warn");
+    setStatus($("#warningsBox"), "Попередження:\n" + lines.join("\n"), "warn");
   } else {
     $("#warningsBox").style.display = "none";
   }
 
   renderTable($("#tblTrades"), [
-    { label:"Date", value:(r)=>r.tradeDate },
-    { label:"Symbol", value:(r)=>r.asset.symbolRaw },
+    { label:"Дата", value:(r)=>r.tradeDate },
+    { label:"Символ", value:(r)=>r.asset.symbolRaw },
     { label:"AssetKey", value:(r)=>r.asset.assetKey },
-    { label:"Qty", value:(r)=>r.quantity, num:true },
+    { label:"К-ть", value:(r)=>r.quantity, num:true },
     { label:"NetCash", value:(r)=>r.netCash, num:true },
-    { label:"CCY", value:(r)=>r.asset.currency },
+    { label:"Валюта", value:(r)=>r.asset.currency },
   ], firstN(st.trades, 200));
 
   renderTable($("#tblDiv"), [
-    { label:"Date", value:(r)=>r.date },
-    { label:"CCY", value:(r)=>r.currency },
-    { label:"Kind", value:(r)=>r.kind },
-    { label:"Amount", value:(r)=>r.amount, num:true },
-    { label:"Description", value:(r)=>r.description },
+    { label:"Дата", value:(r)=>r.date },
+    { label:"Валюта", value:(r)=>r.currency },
+    { label:"Тип", value:(r)=>r.kind },
+    { label:"Сума", value:(r)=>r.amount, num:true },
+    { label:"Опис", value:(r)=>r.description },
   ], firstN(st.cashIncomes, 200));
 
   renderTable($("#tblWh"), [
-    { label:"Date", value:(r)=>r.date },
-    { label:"CCY", value:(r)=>r.currency },
-    { label:"Amount", value:(r)=>r.amount, num:true },
-    { label:"Description", value:(r)=>r.description },
+    { label:"Дата", value:(r)=>r.date },
+    { label:"Валюта", value:(r)=>r.currency },
+    { label:"Сума", value:(r)=>r.amount, num:true },
+    { label:"Опис", value:(r)=>r.description },
   ], firstN(st.withholdings, 200));
 
   renderTable($("#tblPos"), [
-    { label:"Asset", value:(r)=>r.asset.symbolRaw },
+    { label:"Актив", value:(r)=>r.asset.symbolRaw },
     { label:"AssetKey", value:(r)=>r.asset.assetKey },
-    { label:"Qty", value:(r)=>r.quantity, num:true },
-    { label:"CCY", value:(r)=>r.asset.currency },
-    { label:"Value", value:(r)=>r.value, num:true },
+    { label:"К-ть", value:(r)=>r.quantity, num:true },
+    { label:"Валюта", value:(r)=>r.asset.currency },
+    { label:"Вартість", value:(r)=>r.value, num:true },
     { label:"Unrealized P/L", value:(r)=>r.unrealizedPL, num:true },
   ], firstN(st.positions, 200));
 }
@@ -1744,29 +1763,29 @@ function renderPreview(st) {
 ========================= */
 function renderResults(f1, taxSummary) {
   const lines = [];
-  lines.push("ИНВЕСТРЕЗУЛЬТАТ (FIFO, UAH)");
-  lines.push(`• Доход: ${fmt2(taxSummary.invest.incomeUAH)}`);
-  lines.push(`• Расход: ${fmt2(taxSummary.invest.costUAH)}`);
-  lines.push(`• Финрезультат: ${fmt2(taxSummary.invest.resultUAH)}`);
-  lines.push(`• Переносимый убыток: ${fmt2(taxSummary.invest.carryLossUAH)}`);
-  lines.push(`• Итог (стр.3): ${fmt2(taxSummary.invest.netResultUAH)}`);
-  lines.push(`• Прибыль (стр.3.1): ${fmt2(taxSummary.invest.netProfitUAH)}`);
-  lines.push(`• ПДФО (инвест): ${fmt2(taxSummary.invest.pitUAH)}`);
-  lines.push(`• ВЗ (инвест): ${fmt2(taxSummary.invest.milUAH)}`);
-  lines.push(`• FIFO операций (за год): ${String(f1.operations.length)}`);
+  lines.push("ІНВЕСТ‑РЕЗУЛЬТАТ (FIFO, грн)");
+  lines.push(`• Дохід: ${fmt2(taxSummary.invest.incomeUAH)}`);
+  lines.push(`• Витрати: ${fmt2(taxSummary.invest.costUAH)}`);
+  lines.push(`• Фінрезультат: ${fmt2(taxSummary.invest.resultUAH)}`);
+  lines.push(`• Перенесений збиток: ${fmt2(taxSummary.invest.carryLossUAH)}`);
+  lines.push(`• Підсумок (ряд.3): ${fmt2(taxSummary.invest.netResultUAH)}`);
+  lines.push(`• Прибуток (ряд.3.1): ${fmt2(taxSummary.invest.netProfitUAH)}`);
+  lines.push(`• ПДФО (інвест): ${fmt2(taxSummary.invest.pitUAH)}`);
+  lines.push(`• ВЗ (інвест): ${fmt2(taxSummary.invest.milUAH)}`);
+  lines.push(`• FIFO‑операцій (за рік): ${String(f1.operations.length)}`);
   lines.push("");
-  lines.push("ДИВИДЕНДЫ (UAH)");
-  lines.push(`• Дивиденды: ${fmt2(taxSummary.dividends.dividendsUAH)}`);
-  lines.push(`• Удержано (div): ${fmt2(taxSummary.dividends.withholdingDivUAH)}`);
-  lines.push(`• ПДФО gross: ${fmt2(taxSummary.dividends.pitGrossUAH)}`);
-  lines.push(`• Зачёт: ${fmt2(taxSummary.dividends.creditUAH)}`);
-  lines.push(`• ПДФО к уплате: ${fmt2(taxSummary.dividends.pitDueUAH)}`);
-  lines.push(`• ВЗ к уплате: ${fmt2(taxSummary.dividends.milUAH)}`);
+  lines.push("ДИВІДЕНДИ (грн)");
+  lines.push(`• Дивіденди: ${fmt2(taxSummary.dividends.dividendsUAH)}`);
+  lines.push(`• Утримано (div): ${fmt2(taxSummary.dividends.withholdingDivUAH)}`);
+  lines.push(`• ПДФО (gross): ${fmt2(taxSummary.dividends.pitGrossUAH)}`);
+  lines.push(`• Залік: ${fmt2(taxSummary.dividends.creditUAH)}`);
+  lines.push(`• ПДФО до сплати: ${fmt2(taxSummary.dividends.pitDueUAH)}`);
+  lines.push(`• ВЗ до сплати: ${fmt2(taxSummary.dividends.milUAH)}`);
   lines.push("");
-  lines.push("ИТОГО");
-  lines.push(`• ПДФО всего: ${fmt2(taxSummary.totals.pitUAH)}`);
-  lines.push(`• ВЗ всего: ${fmt2(taxSummary.totals.milUAH)}`);
-  lines.push(`• Всего к уплате: ${fmt2(taxSummary.totals.totalUAH)}`);
+  lines.push("РАЗОМ");
+  lines.push(`• ПДФО всього: ${fmt2(taxSummary.totals.pitUAH)}`);
+  lines.push(`• ВЗ всього: ${fmt2(taxSummary.totals.milUAH)}`);
+  lines.push(`• Всього до сплати: ${fmt2(taxSummary.totals.totalUAH)}`);
 
   setStatus($("#resultsBox"), lines.join("\n"), "good");
 
@@ -1774,19 +1793,19 @@ function renderResults(f1, taxSummary) {
     { label:"№", value:(r)=>r.n },
     { label:"Код", value:(r)=>r.assetType },
     { label:"Найменування", value:(r)=>r.name },
-    { label:"Доход UAH", value:(r)=>r.incomeUAH, num:true },
-    { label:"Витрати UAH", value:(r)=>r.costUAH, num:true },
-    { label:"Результат UAH", value:(r)=>r.resultUAH, num:true },
+    { label:"Дохід (грн)", value:(r)=>r.incomeUAH, num:true },
+    { label:"Витрати (грн)", value:(r)=>r.costUAH, num:true },
+    { label:"Результат (грн)", value:(r)=>r.resultUAH, num:true },
     { label:"assetKey", value:(r)=>r.assetKey },
   ], f1.rows.slice().sort((a,b)=>a.name.localeCompare(b.name)));
 
   renderTable($("#tblOps"), [
-    { label:"CloseDate", value:(r)=>r.closeDate },
-    { label:"AssetKey", value:(r)=>r.assetKey },
-    { label:"QtyAbs", value:(r)=>r.qtyAbs, num:true },
-    { label:"Income UAH", value:(r)=>r.incomeUAH, num:true },
-    { label:"Cost UAH", value:(r)=>r.costUAH, num:true },
-    { label:"Result UAH", value:(r)=>r.resultUAH, num:true },
+    { label:"Дата закриття", value:(r)=>r.closeDate },
+    { label:"assetKey", value:(r)=>r.assetKey },
+    { label:"К-ть (abs)", value:(r)=>r.qtyAbs, num:true },
+    { label:"Дохід (грн)", value:(r)=>r.incomeUAH, num:true },
+    { label:"Витрати (грн)", value:(r)=>r.costUAH, num:true },
+    { label:"Результат (грн)", value:(r)=>r.resultUAH, num:true },
   ], firstN(f1.operations, 300));
 }
 
@@ -1804,7 +1823,7 @@ $("#taxYear").addEventListener("change", () => {
 $("#fileCsv").addEventListener("change", () => {
   $("#btnParse").disabled = !$("#fileCsv").files || $("#fileCsv").files.length === 0;
   $("#btnReset").disabled = $("#btnParse").disabled;
-  setStatus($("#statusUpload"), $("#btnParse").disabled ? "Ожидаю CSV…" : `Файл выбран: ${$("#fileCsv").files[0].name}\nНажмите “Распознать отчёт”.`);
+  setStatus($("#statusUpload"), $("#btnParse").disabled ? "Очікую CSV…" : `Файл обрано: ${$("#fileCsv").files[0].name}\nНатисніть “Розпізнати звіт”.`);
 });
 
 $("#btnReset").addEventListener("click", () => {
@@ -1854,11 +1873,11 @@ $("#btnReset").addEventListener("click", () => {
   $("#tblF1").innerHTML = "";
   $("#tblOps").innerHTML = "";
 
-  setStatus($("#statusUpload"), "Ожидаю CSV…");
-  setStatus($("#fxStatus"), "Сначала распознайте CSV, чтобы понять какие валюты и даты нужны.");
-  setStatus($("#statusCalc"), "Сначала распознайте CSV и подготовьте курсы НБУ.");
-  setStatus($("#resultsBox"), "Пока нет расчёта.");
-  setStatus($("#losersBox"), "Пока нет данных.");
+  setStatus($("#statusUpload"), "Очікую CSV…");
+  setStatus($("#fxStatus"), "Спочатку розпізнайте CSV, щоб визначити потрібні валюти та дати.");
+  setStatus($("#statusCalc"), "Спочатку розпізнайте CSV та підготуйте курси НБУ.");
+  setStatus($("#resultsBox"), "Поки що немає розрахунку.");
+  setStatus($("#losersBox"), "Поки що немає даних.");
 });
 
 $("#btnParse").addEventListener("click", async () => {
@@ -1869,10 +1888,10 @@ $("#btnParse").addEventListener("click", async () => {
     setStatus($("#statusUpload"), "Читаю файл…");
     const text = await f.text();
 
-    setStatus($("#statusUpload"), "Парсю CSV…");
+    setStatus($("#statusUpload"), "Обробляю CSV…");
     const rows = parseCSV(text);
 
-    setStatus($("#statusUpload"), "Распознаю секции…");
+    setStatus($("#statusUpload"), "Розпізнаю секції…");
     const st = parseFlexReport(rows, f.name);
 
     state.statement = st;
@@ -1892,7 +1911,7 @@ $("#btnParse").addEventListener("click", async () => {
     updateReadinessUi();
   } catch (e) {
     console.error(e);
-    setStatus($("#statusUpload"), "Ошибка распознавания:\n" + (e?.message || String(e)), "bad");
+    setStatus($("#statusUpload"), "Помилка розпізнавання:\n" + (e?.message || String(e)), "bad");
   } finally {
     $("#btnParse").disabled = false;
   }
@@ -1920,27 +1939,27 @@ $("#btnClearFx").addEventListener("click", () => {
   fxClear();
   updateFxUi();
   updateReadinessUi();
-  setStatus($("#fxStatus"), $("#fxStatus").textContent + "\n\nКурсы очищены.", "warn");
+  setStatus($("#fxStatus"), $("#fxStatus").textContent + "\n\nКурси очищено.", "warn");
 });
 
 $("#btnLoadFxFiles").addEventListener("click", async () => {
   try {
     const files = $("#fxFiles").files;
     if (!files || !files.length) {
-      setStatus($("#fxStatus"), "Выберите файлы курсов (JSON), затем нажмите “Подгрузи файлы JSON”.", "warn");
+      setStatus($("#fxStatus"), "Оберіть JSON‑файли курсів, потім натисніть “Підвантаж JSON‑файли”.", "warn");
       return;
     }
-    setStatus($("#fxStatus"), "Загружаю файлы курсов…");
+    setStatus($("#fxStatus"), "Завантажую JSON‑файли курсів…");
     await loadFxFromFiles(files, (msg)=>setStatus($("#fxStatus"), msg));
     fxStore.meta.provider = fxStore.meta.provider || "NBU_FILES";
     fxStore.meta.currencies = fxCurrenciesLoaded();
 
     updateFxUi();
     updateReadinessUi();
-    setStatus($("#fxStatus"), $("#fxStatus").textContent + "\n\nКурсы загружены ✅", "good");
+    setStatus($("#fxStatus"), $("#fxStatus").textContent + "\n\nКурси завантажено ✅", "good");
   } catch (e) {
     console.error(e);
-    setStatus($("#fxStatus"), "Ошибка загрузки курсов:\n" + (e?.message || String(e)), "bad");
+    setStatus($("#fxStatus"), "Помилка завантаження курсів:\n" + (e?.message || String(e)), "bad");
   }
 });
 
@@ -1949,7 +1968,7 @@ $("#btnDownloadFx").addEventListener("click", async () => {
   const needs = state.fxNeeds || computeFxNeeds(state.statement, readSettings().taxYear);
 
   try {
-    setStatus($("#fxStatus"), "Готовлю скачивание…");
+    setStatus($("#fxStatus"), "Готую завантаження…");
     const bundle = await downloadNbuFxBundleOnline(needs, (msg)=>setStatus($("#fxStatus"), msg));
 
     loadFxFromBundle(bundle);
@@ -1963,7 +1982,7 @@ $("#btnDownloadFx").addEventListener("click", async () => {
 
     updateFxUi();
     updateReadinessUi();
-    setStatus($("#fxStatus"), $("#fxStatus").textContent + `\n\nГотово ✅ Файл скачан: ${fileName}`, "good");
+    setStatus($("#fxStatus"), $("#fxStatus").textContent + `\n\nГотово ✅ Файл збережено: ${fileName}`, "good");
   } catch (e) {
     console.error(e);
     setStatus($("#fxStatus"), (e?.message || String(e)), "bad");
@@ -1984,18 +2003,18 @@ $("#btnCalc").addEventListener("click", async () => {
 
     const settings = readSettings();
 
-    setStatus($("#statusCalc"), "Проверяю курсы…");
+    setStatus($("#statusCalc"), "Перевіряю курси…");
     assertFxCoverage(state.statement, settings.taxYear);
 
-    setStatus($("#statusCalc"), "Считаю FIFO (инвестрезультат)…");
+    setStatus($("#statusCalc"), "Розраховую FIFO (інвест‑результат)…");
     const fifo = await fifoInUAH(state.statement.trades);
     state.fifo = fifo;
 
-    setStatus($("#statusCalc"), "Считаю дивиденды и удержанный налог…");
+    setStatus($("#statusCalc"), "Розраховую дивіденди та утриманий податок…");
     const div = await computeDividendsUAH(state.statement, settings);
     const whDiv = await computeWithholdingOnDivUAH(state.statement, settings);
 
-    setStatus($("#statusCalc"), "Формирую Ф1…");
+    setStatus($("#statusCalc"), "Формую Ф1…");
     const f1 = buildF1Model(state.statement, state.assetIndex, fifo.matches, settings);
     state.f1 = f1;
 
@@ -2048,7 +2067,7 @@ $("#btnCalc").addEventListener("click", async () => {
     setStatus($("#statusCalc"), "Готово ✅", "good");
   } catch (e) {
     console.error(e);
-    setStatus($("#statusCalc"), "Ошибка расчёта:\n" + (e?.message || String(e)), "bad");
+    setStatus($("#statusCalc"), "Помилка розрахунку:\n" + (e?.message || String(e)), "bad");
   } finally {
     $("#btnCalc").disabled = false;
   }
@@ -2090,16 +2109,16 @@ $("#btnShowLosers").addEventListener("click", async () => {
     const milRate = Number($("#milInvestRate").value);
     const netProfit = state.taxSummary.invest.netProfitUAH;
 
-    setStatus($("#losersBox"), "Считаю…");
+    setStatus($("#losersBox"), "Розраховую…");
     const rows = await computeTopLosers(state.statement, asOf, topN, netProfit, pitRate, milRate);
 
     const cols = [
-      { label:"Asset", value:(r)=>r.p.asset.symbolRaw },
-      { label:"Qty", value:(r)=>r.p.quantity, num:true },
-      { label:"CCY", value:(r)=>r.p.asset.currency },
-      { label:"Unrealized UAH", value:(r)=>r.unrealizedUAH, num:true },
-      { label:"Loss UAH", value:(r)=>r.lossUAH, num:true },
-      { label:"Оценка экономии налога", value:(r)=>r.estTaxSaved, num:true },
+      { label:"Актив", value:(r)=>r.p.asset.symbolRaw },
+      { label:"К-ть", value:(r)=>r.p.quantity, num:true },
+      { label:"Валюта", value:(r)=>r.p.asset.currency },
+      { label:"Unrealized (грн)", value:(r)=>r.unrealizedUAH, num:true },
+      { label:"Збиток (грн)", value:(r)=>r.lossUAH, num:true },
+      { label:"Оцінка економії податку", value:(r)=>r.estTaxSaved, num:true },
     ];
 
     const box = $("#losersBox");
@@ -2108,7 +2127,7 @@ $("#btnShowLosers").addEventListener("click", async () => {
     const info = document.createElement("div");
     info.className = "small muted";
     info.style.whiteSpace = "pre-wrap";
-    info.textContent = `Дата FX: ${asOf}\nТекущая инвестприбыль (для оценки экономии): ${fmt2(netProfit)} UAH\n`;
+    info.textContent = `Дата FX: ${asOf}\nПоточний інвест‑прибуток (для оцінки економії): ${fmt2(netProfit)} грн\n`;
     box.appendChild(info);
 
     const wrap = document.createElement("div");
@@ -2119,16 +2138,16 @@ $("#btnShowLosers").addEventListener("click", async () => {
     box.appendChild(wrap);
   } catch (e) {
     console.error(e);
-    setStatus($("#losersBox"), "Ошибка:\n" + (e?.message || String(e)), "bad");
+    setStatus($("#losersBox"), "Помилка:\n" + (e?.message || String(e)), "bad");
   }
 });
 
 /* =========================
    Init
 ========================= */
-setStatus($("#statusUpload"), "Ожидаю CSV…");
-setStatus($("#fxStatus"), "Сначала распознайте CSV, чтобы понять какие валюты и даты нужны.");
-setStatus($("#statusCalc"), "Сначала распознайте CSV и подготовьте курсы НБУ.");
+setStatus($("#statusUpload"), "Очікую CSV…");
+setStatus($("#fxStatus"), "Спочатку розпізнайте CSV, щоб визначити потрібні валюти та дати.");
+setStatus($("#statusCalc"), "Спочатку розпізнайте CSV та підготуйте курси НБУ.");
 </script>
 </body>
 </html>
