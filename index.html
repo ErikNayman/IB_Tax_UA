@@ -706,6 +706,333 @@ td.num.zero{ color: var(--muted); opacity: 0.85; }
     </div>
 
     <div id="losersBox" class="status">Поки що немає даних.</div>
+    <div class="hr"></div>
+
+<!-- Модуль моделювання податкових наслідків: Tax harvesting + опціони -->
+<details id="simDetails" style="margin-top:10px;">
+  <summary>Моделювання: tax harvesting + опціони (по роках)</summary>
+
+  <div class="inlineHelp">
+    Цей блок — “what‑if” надбудова: він <b>не змінює</b> ваш основний FIFO‑розрахунок (Ф1) з кроку 3,
+    а рахує <b>дельту</b> для сценарію. Корисно, якщо ви ще <i>плануєте</i> продаж збиткової позиції
+    (наприклад, TLT) та хочете залишитись у ринку через <b>Call</b> (глибоко ITM).
+    <br/><br/>
+    ⚠️ Це не податкова консультація. Для складних кейсів (виконання опціону, перенос збитків, специфічні активи)
+    перевіряйте норми ПКУ та/або консультуйтесь із фахівцем.
+  </div>
+
+  <div class="hr"></div>
+
+  <h3 class="small muted" style="margin:0 0 8px 0;">База (поточний розрахунок з кроку 3)</h3>
+  <div class="cards3" id="simBaseCards">
+    <div class="bigCard">
+      <div class="label">Рік</div>
+      <div class="value" id="simBaseYear">—</div>
+      <div class="sub">Береться з налаштування “Податковий рік” у кроці 3.</div>
+    </div>
+    <div class="bigCard">
+      <div class="label">Разом до сплати (база)</div>
+      <div class="value" id="simBaseTotal">—</div>
+      <div class="sub"><span class="mono" id="simBaseBreakdown">—</span></div>
+    </div>
+    <div class="bigCard">
+      <div class="label">Інвест‑прибуток (база)</div>
+      <div class="value" id="simBaseInvestProfit">—</div>
+      <div class="sub">Ф1, рядок 3.1 (прибуток). Якщо збиток — 0.00.</div>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <h3 class="small muted" style="margin:0 0 8px 0;">Сценарій</h3>
+
+  <div class="row">
+    <div class="field">
+      <label>Оберіть актив для “tax harvesting” (опційно)</label>
+      <select id="simPickPosition">
+        <option value="">— (оберу вручну нижче)</option>
+      </select>
+      <div class="inlineHelp">
+        Після розрахунку (крок 3) список відкритих позицій можна підвантажити сюди автоматично (JS).
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Податкові роки для моделювання</label>
+      <div class="row" style="grid-template-columns:1fr 1fr;">
+        <div class="field">
+          <label class="small muted">Рік A (продаж/купівля)</label>
+          <select id="simYearA">
+            <option value="2025" selected>2025</option>
+            <option value="2024">2024</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="small muted">Рік B (закриття/виконання опціону)</label>
+          <select id="simYearB">
+            <option value="">— (той самий рік)</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+          </select>
+        </div>
+      </div>
+      <div class="inlineHelp">
+        Якщо опціон не закриваєте до кінця року — ефект може “перетекти” на наступний рік.
+      </div>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <h3 class="small muted" style="margin:0 0 8px 0;">1) Продаж базового активу (фіксація збитку/прибутку)</h3>
+
+  <div class="row">
+    <div class="field">
+      <label>Актив (assetKey або тикер)</label>
+      <input id="simUnderlyingKey" type="text" placeholder="Напр., STK|USD|TLT або TLT" />
+      <div class="inlineHelp">Порада: якщо актив є у вашому звіті IB, краще використовувати assetKey.</div>
+    </div>
+    <div class="field">
+      <label>Кількість до продажу</label>
+      <input id="simSellQty" type="number" step="0.0001" value="0" />
+      <div class="inlineHelp">Для акцій/ETF — у штуках. Для опціонів — у контрактах.</div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Дата продажу</label>
+      <input id="simSellDate" type="text" placeholder="YYYY-MM-DD" />
+      <div class="inlineHelp">Для перерахунку в гривню використовується курс НБУ на цю дату.</div>
+    </div>
+    <div class="field">
+      <label>Грошовий результат продажу (у валюті угоди)</label>
+      <input id="simSellNetCash" type="number" step="0.01" value="0" />
+      <div class="inlineHelp">
+        Введіть <b>netCash</b> як у IB: для продажу це зазвичай <b>плюс</b>, для купівлі — <b>мінус</b>.
+        Якщо ви вводите лише ціну, використайте розширений режим нижче.
+      </div>
+    </div>
+  </div>
+
+  <details style="margin-top:10px;">
+    <summary>Розширено: продаж через ціну (якщо не знаєте netCash)</summary>
+
+    <div class="row" style="margin-top:10px;">
+      <div class="field">
+        <label>Валюта угоди</label>
+        <select id="simSellCcy">
+          <option value="USD" selected>USD</option>
+          <option value="EUR">EUR</option>
+          <option value="GBP">GBP</option>
+          <option value="CHF">CHF</option>
+          <option value="PLN">PLN</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Ціна продажу за 1 шт.</label>
+        <input id="simSellPrice" type="number" step="0.0001" value="0" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Комісія (зазвичай від’ємна)</label>
+        <input id="simSellFee" type="number" step="0.01" value="0" />
+      </div>
+      <div class="field">
+        <label>Як рахувати netCash</label>
+        <select id="simSellCalcMode">
+          <option value="AUTO" selected>Авто: netCash = qty*price + fee (для продажу)</option>
+          <option value="MANUAL">Я ввожу netCash вручну (ігнорувати ціну)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="inlineHelp">
+      Якщо актив котирується в іншій валюті — обирайте валюту угоди.
+      Для опціону “qty” = кількість контрактів, ціна = премія за 1 контракт, multiplier враховується нижче.
+    </div>
+  </details>
+
+  <div class="hr"></div>
+
+  <h3 class="small muted" style="margin:0 0 8px 0;">2) Купівля Call (щоб зберегти експозицію)</h3>
+
+  <div class="row">
+    <div class="field">
+      <label>Опціон на (underlying)</label>
+      <input id="simOptUnderlying" type="text" placeholder="Напр., TLT" />
+      <div class="inlineHelp">Можна залишити порожнім — буде взято з поля “Актив”.</div>
+    </div>
+    <div class="field">
+      <label>Тип</label>
+      <select id="simOptRight">
+        <option value="C" selected>Call (C)</option>
+        <option value="P">Put (P)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Дата купівлі опціону</label>
+      <input id="simOptBuyDate" type="text" placeholder="YYYY-MM-DD" />
+    </div>
+    <div class="field">
+      <label>Експірація</label>
+      <input id="simOptExpiry" type="text" placeholder="YYYY-MM-DD" />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Strike</label>
+      <input id="simOptStrike" type="number" step="0.01" value="0" />
+    </div>
+    <div class="field">
+      <label>Контрактів</label>
+      <input id="simOptContracts" type="number" step="1" value="1" />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Мультиплікатор</label>
+      <input id="simOptMultiplier" type="number" step="1" value="100" />
+      <div class="inlineHelp">Для акційних опціонів зазвичай 100.</div>
+    </div>
+    <div class="field">
+      <label>Премія (за 1 контракт)</label>
+      <input id="simOptPremium" type="number" step="0.0001" value="0" />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Валюта премії</label>
+      <select id="simOptCcy">
+        <option value="USD" selected>USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+        <option value="CHF">CHF</option>
+        <option value="PLN">PLN</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Комісія (зазвичай від’ємна)</label>
+      <input id="simOptFee" type="number" step="0.01" value="0" />
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <h3 class="small muted" style="margin:0 0 8px 0;">3) Що далі з опціоном?</h3>
+
+  <div class="row">
+    <div class="field">
+      <label>Сценарій завершення</label>
+      <select id="simOptOutcome">
+        <option value="OPEN" selected>Тримаю на кінець року (без закриття)</option>
+        <option value="CLOSE">Закрив продажем опціону</option>
+        <option value="EXERCISE">Виконання/Assignment (опціон → базовий актив)</option>
+        <option value="EXPIRE">Експірація (0.00)</option>
+      </select>
+      <div class="inlineHelp">
+        Якщо опціон <b>не закрито</b> в році A — премія зазвичай не формує фінрезультат у Ф1 цього року,
+        а вплине в році закриття/експірації/виконання.
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Правило віднесення премії у моделюванні</label>
+      <select id="simPremiumRule">
+        <option value="ON_CLOSE" selected>Стандарт: премія враховується при закритті/експірації/виконанні</option>
+        <option value="ON_BUY">Оцінка: вважати премію витратами в день купівлі</option>
+      </select>
+      <div class="inlineHelp">
+        Рекомендовано залишити “Стандарт”. “Оцінка” корисна як стрес‑тест, але може відрізнятись від практики обліку.
+      </div>
+    </div>
+  </div>
+
+  <div id="simCloseWrap" class="hidden" style="margin-top:10px;">
+    <div class="row">
+      <div class="field">
+        <label>Дата закриття опціону</label>
+        <input id="simOptCloseDate" type="text" placeholder="YYYY-MM-DD" />
+      </div>
+      <div class="field">
+        <label>Премія закриття (за 1 контракт)</label>
+        <input id="simOptClosePremium" type="number" step="0.0001" value="0" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Комісія закриття (зазвичай від’ємна)</label>
+        <input id="simOptCloseFee" type="number" step="0.01" value="0" />
+      </div>
+      <div class="field">
+        <label>Підказка</label>
+        <div class="status">Опціон закривається як окрема інвест‑операція (Ф1). Премії та комісії входять у результат.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="simExerciseWrap" class="hidden" style="margin-top:10px;">
+    <div class="row">
+      <div class="field">
+        <label>Дата виконання/assignment</label>
+        <input id="simExerciseDate" type="text" placeholder="YYYY-MM-DD" />
+      </div>
+      <div class="field">
+        <label>Ціна базового активу (за 1 шт.) на дату виконання</label>
+        <input id="simExerciseStockPrice" type="number" step="0.0001" value="0" />
+      </div>
+    </div>
+    <div class="inlineHelp">
+      Для виконання потрібна прив’язка до операції з базовим активом (купівля/продаж за strike) та коректне включення премії у собівартість.
+      Це реалізується в надбудові як “синтетичні угоди” (не змінюючи ваш базовий FIFO).
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <div class="btns">
+    <button id="btnSimRun" type="button" disabled>Розрахувати сценарій</button>
+    <button id="btnSimReset" class="secondary" type="button" disabled>Скинути сценарій</button>
+    <button id="btnSimUseLoser" class="ghost" type="button" disabled>Підставити зі збиткових позицій</button>
+  </div>
+
+  <div id="simStatus" class="status">Заповніть поля сценарію та натисніть “Розрахувати сценарій”.</div>
+
+  <div class="hr"></div>
+
+  <h3 class="small muted" style="margin:0 0 8px 0;">Результат по роках (база vs сценарій)</h3>
+  <div class="tableWrap"><table id="tblSimYears"></table></div>
+
+  <details style="margin-top:10px;">
+    <summary>Деталі подій сценарію</summary>
+    <div class="inlineHelp">Тут відображаються синтетичні події, які надбудова додає у “what‑if” розрахунок.</div>
+    <div class="tableWrap" style="margin-top:8px;"><table id="tblSimEvents"></table></div>
+  </details>
+
+  <details style="margin-top:10px;">
+    <summary>Пояснення (коротко): як це впливає на Ф1</summary>
+    <div class="inlineHelp">
+      <b>Продаж збиткової позиції</b> дає від’ємний фінрезультат у Ф1 в році продажу (якщо є прибуток, він може бути зменшений).
+      <br/>
+      <b>Купівля Call</b> — це витрата (премія), але <i>як правило</i> фінрезультат формується при закритті/експірації/виконанні.
+      Тому сценарій “продав у збиток + купив ITM Call” часто зменшує податок у році A, а потенційно збільшує у році B.
+      <br/><br/>
+      Надбудова показує ці ефекти окремо по роках, не змінюючи ваш базовий розрахунок.
+    </div>
+  </details>
+</details>
+
   </section>
 </main>
 
