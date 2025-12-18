@@ -1,0 +1,3650 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IB → Податки Україна (ПДФО + ВЗ) — v4 (Wizard)</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --card:#121a27;
+      --muted:#93a4c7;
+      --text:#e8eefc;
+      --good:#2ee59d;
+      --bad:#ff6b6b;
+      --warn:#ffd166;
+      --line:rgba(255,255,255,0.10);
+      --btn:#2d6cdf;
+      --btn2:#2a3347;
+      --mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans","Liberation Sans", sans-serif;
+    }
+    html,body{background:var(--bg);color:var(--text);font-family:var(--sans);margin:0;}
+    a{color:#9dc1ff}
+    .wrap{max-width:1120px;margin:0 auto;padding:16px;}
+    header{padding:16px 16px 8px;max-width:1120px;margin:0 auto;}
+    header h1{font-size:18px;margin:0 0 8px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    header p{margin:0;color:var(--muted);line-height:1.45}
+    .tag{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted);background:rgba(255,255,255,0.02)}
+    .topbar{
+      max-width:1120px;margin:0 auto;padding:0 16px 10px;
+      display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;
+    }
+    .stepper{display:flex;gap:8px;flex-wrap:wrap}
+    .stepBtn{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.02);
+      color:#cfe0ff;
+      padding:8px 10px;
+      border-radius:999px;
+      font-weight:800;
+      cursor:pointer;
+      display:flex;
+      gap:6px;
+      align-items:center;
+      user-select:none;
+    }
+    .stepBtn.locked{opacity:0.45;cursor:not-allowed}
+    .stepBtn.active{background:var(--btn);border-color:rgba(45,108,223,0.7);color:#fff}
+    .stepBtn.done{border-color:rgba(46,229,157,0.45)}
+    .stepNum{
+      width:18px;height:18px;border-radius:50%;
+      display:inline-grid;place-items:center;
+      font-size:12px;font-weight:900;
+      background:rgba(0,0,0,0.2);
+      border:1px solid rgba(255,255,255,0.12);
+    }
+    .badges{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+    .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,0.02)}
+    .badge.good{border-color:rgba(46,229,157,0.35);color:#d9ffef}
+    .badge.warn{border-color:rgba(255,209,102,0.35);color:#fff2cc}
+
+    main{max-width:1120px;margin:0 auto;padding:0 16px 110px;}
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.28);
+    }
+    .wStep{display:none}
+    .wStep.active{display:block}
+    .wStep h2{font-size:14px;margin:0 0 10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+    .row{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:860px){.row{grid-template-columns:1fr 1fr}}
+    .field{display:grid;gap:6px}
+    .field label{font-size:12px;color:var(--muted)}
+    input[type="file"],input[type="number"],input[type="text"],select,textarea{
+      background:rgba(255,255,255,0.04);
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      outline:none;
+    }
+    textarea{min-height:90px;resize:vertical;font-family:var(--mono);font-size:12px}
+    .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    button{
+      border:0;border-radius:12px;padding:10px 12px;
+      background:var(--btn);color:#fff;cursor:pointer;
+      font-weight:900;
+    }
+    button.secondary{background:var(--btn2)}
+    button.ghost{background:transparent;border:1px solid var(--line);color:#cfe0ff}
+    button:disabled{opacity:0.55;cursor:not-allowed}
+    .hr{height:1px;background:var(--line);margin:12px 0}
+
+    .status{
+      margin-top:10px;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.03);
+      font-size:12px;line-height:1.35;
+      white-space:pre-wrap;
+    }
+    .status.good{border-color:rgba(46,229,157,0.35)}
+    .status.bad{border-color:rgba(255,107,107,0.35)}
+    .status.warn{border-color:rgba(255,209,102,0.35)}
+
+    .drop{
+      border:1px dashed rgba(255,255,255,0.18);
+      border-radius:14px;
+      padding:14px;
+      background:rgba(255,255,255,0.02);
+      display:flex;gap:10px;align-items:center;justify-content:space-between;
+    }
+    .drop.drag{border-color:rgba(45,108,223,0.8);background:rgba(45,108,223,0.12)}
+    .drop .txt{display:grid;gap:4px}
+    .drop .txt .title{font-weight:900}
+    .drop .txt .sub{font-size:12px;color:var(--muted)}
+    .drop .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+    .kpi{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:860px){.kpi{grid-template-columns:1fr 1fr}}
+    .kpi .box{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.02);
+      border-radius:14px;
+      padding:12px;
+    }
+    .kpi .t{font-size:12px;color:var(--muted)}
+    .kpi .v{font-size:16px;font-weight:1000;margin-top:6px;font-family:var(--mono)}
+    .cards3{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:980px){.cards3{grid-template-columns:1fr 1fr 1fr}}
+    .bigCard{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.02);
+      border-radius:14px;
+      padding:12px;
+    }
+    .bigCard .label{font-size:12px;color:var(--muted)}
+    .bigCard .value{font-size:18px;font-weight:1000;margin-top:6px;font-family:var(--mono)}
+    .bigCard .sub{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.35}
+
+    table{width:100%;border-collapse:collapse;margin-top:8px;overflow:hidden;border-radius:12px}
+    th,td{border-bottom:1px solid var(--line);padding:8px 8px;vertical-align:top;font-size:12px}
+    th{text-align:left;color:#cfe0ff;background:rgba(255,255,255,0.03);position:sticky;top:0}
+    td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+    .tableWrap{max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+    details{border:1px solid var(--line);border-radius:12px;padding:10px}
+    details summary{cursor:pointer;color:#cfe0ff;font-weight:900}
+
+    .progressWrap{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.02);
+      border-radius:999px;
+      height:12px;
+      overflow:hidden;
+      margin-top:8px;
+    }
+    .progressBar{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg, rgba(45,108,223,0.9), rgba(46,229,157,0.9));
+      border-radius:999px;
+      transition:width 240ms ease;
+    }
+
+    .footerNav{
+      position:fixed;left:0;right:0;bottom:0;
+      background:rgba(10,14,22,0.92);
+      backdrop-filter: blur(10px);
+      border-top:1px solid rgba(255,255,255,0.10);
+      padding:10px 16px;
+      z-index:50;
+    }
+    .footerNav .inner{
+      max-width:1120px;margin:0 auto;
+      display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+    }
+    .footerNav .info{color:var(--muted);font-size:12px;line-height:1.35;max-width:720px}
+    .footerNav .navBtns{display:flex;gap:8px;flex-wrap:wrap}
+
+    .copyBtn{
+      padding:6px 10px;border-radius:10px;
+      font-weight:900;font-size:12px;
+      background:transparent;border:1px solid var(--line);color:#cfe0ff;
+    }
+    .miniPills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .pill{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:rgba(255,255,255,0.02);color:var(--muted)}
+    .pill.good{border-color:rgba(46,229,157,0.35);color:#d9ffef}
+    .pill.warn{border-color:rgba(255,209,102,0.35);color:#fff2cc}
+    .pill.bad{border-color:rgba(255,107,107,0.35);color:#ffd8d8}
+
+    .inlineHelp{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.45}
+    .hidden{display:none !important}
+  
+/* =========================
+   UI/UX polish patch (append)
+========================= */
+:root{
+  color-scheme: dark;
+
+  /* richer background without changing your palette */
+  --bg-gradient:
+    radial-gradient(1100px 600px at 85% -10%, rgba(45,108,223,0.22) 0%, rgba(11,15,23,1) 60%),
+    radial-gradient(900px 520px at -10% 0%, rgba(46,229,157,0.10) 0%, rgba(11,15,23,1) 55%);
+
+  --surface: rgba(18,26,39,0.72);
+  --surface2: rgba(255,255,255,0.03);
+  --border1: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.05);
+  --focus: rgba(157,193,255,0.95);
+  --shadow-lg: 0 14px 50px -16px rgba(0,0,0,0.62);
+}
+
+body{
+  background: var(--bg-gradient);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.card{
+  background: var(--surface);
+  border-color: var(--border2);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+}
+
+.topbar{
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgba(11,15,23,0.82);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border2);
+  padding-top: 10px;
+}
+
+/* give content space for fixed footer + safe area */
+main{
+  padding-bottom: calc(120px + env(safe-area-inset-bottom));
+}
+
+/* Focus ring: keyboard + accessibility */
+input[type="file"],input[type="number"],input[type="text"],select,textarea{
+  border-color: var(--border1);
+}
+input:focus,select:focus,textarea:focus,button:focus-visible{
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Buttons feel more “alive” */
+button{
+  transition: transform 120ms ease, filter 120ms ease;
+}
+button:hover:not(:disabled){
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+button:active:not(:disabled){
+  transform: translateY(0);
+  filter: brightness(1.02);
+}
+
+/* Drop zones: clickable, hover hint */
+.drop{
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.drop:hover{
+  border-color: rgba(45,108,223,0.55);
+  background: rgba(45,108,223,0.06);
+  transform: translateY(-1px);
+}
+
+/* Step transitions: less “jump” */
+.wStep.active{
+  animation: stepIn 220ms ease-out;
+}
+@keyframes stepIn{
+  from{ opacity: 0; transform: translateY(8px); }
+  to  { opacity: 1; transform: translateY(0); }
+}
+
+/* Tables: readability */
+th{
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  background: rgba(18,26,39,0.92);
+}
+tbody tr:nth-child(2n) td{
+  background: rgba(255,255,255,0.01);
+}
+tr:hover td{
+  background: rgba(255,255,255,0.02);
+}
+
+/* Optional numeric tone */
+td.num.pos{ color: var(--good); }
+td.num.neg{ color: var(--bad); }
+td.num.zero{ color: var(--muted); opacity: 0.85; }
+/* Losers table: clickable assetKey -> prefill simulation */
+.assetKeyBtn{
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  color: #9dc1ff !important;
+  font-weight: 900;
+  font-family: var(--mono);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.assetKeyBtn:hover{ filter: brightness(1.12); }
+.assetKeyBtn:focus-visible{
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+
+/* Top progress line inside topbar */
+.progressTop{
+  flex-basis: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.progressTop > div{
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(45,108,223,0.95), rgba(46,229,157,0.95));
+  transition: width 240ms ease;
+}
+
+/* Toast notifications */
+.toast-container{
+  position: fixed;
+  right: 16px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 32px));
+}
+.toast{
+  background: rgba(18,26,39,0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border1);
+  border-left-width: 4px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  font-size: 13px;
+  line-height: 1.35;
+  animation: toastIn 160ms ease-out;
+}
+.toast.info{ border-left-color: rgba(157,193,255,0.9); }
+.toast.success{ border-left-color: rgba(46,229,157,0.75); }
+.toast.warn{ border-left-color: rgba(255,209,102,0.85); }
+.toast.error{ border-left-color: rgba(255,107,107,0.85); }
+@keyframes toastIn{
+  from{ opacity: 0; transform: translateY(6px); }
+  to  { opacity: 1; transform: translateY(0); }
+}
+
+/* Screen-reader only utility */
+.srOnly{
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>
+    IB → Податки Україна (ПДФО + військовий збір) <span class="tag">v4 • Wizard • FIFO + НБУ</span>
+  </h1>
+  <p>
+    Працює локально у браузері: завантажуєте CSV з IB → додаєте курси НБУ → отримуєте Ф1, ПДФО/ВЗ та експорт.
+    <span class="tag">⚠️ не є податковою консультацією</span>
+  </p>
+</header>
+
+<div class="topbar">
+
+  <div class="progressTop" aria-hidden="true">
+    <div id="topProgressBar"></div>
+  </div>
+
+  <div class="stepper" id="stepper">
+    <div class="stepBtn" data-step="1"><span class="stepNum">1</span> Звіт IB</div>
+    <div class="stepBtn locked" data-step="2"><span class="stepNum">2</span> Курси НБУ</div>
+    <div class="stepBtn locked" data-step="3"><span class="stepNum">3</span> Розрахунок</div>
+    <div class="stepBtn locked" data-step="4"><span class="stepNum">4</span> Позиції</div>
+  </div>
+
+  <div class="badges">
+    <div class="badge good">✅ Дані обробляються локально</div>
+    <div class="badge" id="badgeMode">ℹ️ XLSX через CDN (онлайн)</div>
+  </div>
+</div>
+
+<main>
+  <!-- STEP 1 -->
+  <section class="card wStep active" data-step="1">
+    <h2>Крок 1/4 — Завантаження CSV‑звіту IB <span class="tag">Drag & Drop</span></h2>
+
+    <div class="drop" id="dropCsv">
+      <div class="txt">
+        <div class="title">Перетягніть CSV сюди</div>
+        <div class="sub">або натисніть «Обрати файл». Підтримка: Flex/Activity multi‑section CSV.</div>
+      </div>
+      <div class="actions">
+        <input id="fileCsv" type="file" accept=".csv,text/csv" class="hidden" />
+        <button id="btnPickCsv" class="secondary" type="button">Обрати файл</button>
+        <button id="btnParse" type="button" disabled>Розпізнати звіт</button>
+      </div>
+    </div>
+
+    <div class="miniPills">
+      <div class="pill" id="csvPill">CSV не обрано</div>
+      <button class="copyBtn" id="btnReset" type="button" disabled>Скинути</button>
+    </div>
+
+    <div id="csvInfo" class="status">Очікую CSV…</div>
+
+    <div class="hr"></div>
+
+    <div class="kpi">
+      <div class="box"><div class="t">Діапазон дат у файлі</div><div class="v" id="kpiDates">—</div></div>
+      <div class="box"><div class="t">Валюти у файлі</div><div class="v" id="kpiCurrencies">—</div></div>
+      <div class="box"><div class="t">Угоди (Trades)</div><div class="v" id="kpiTrades">—</div></div>
+      <div class="box"><div class="t">Дивіденди / Утримання / Відкриті позиції</div><div class="v" id="kpiOther">—</div></div>
+    </div>
+
+    <div id="warningsBox" class="status warn hidden"></div>
+
+    <div class="btns">
+      <button id="btnDownloadParsed" class="secondary" type="button" disabled>Завантажити Statement (JSON)</button>
+    </div>
+
+    <details style="margin-top:10px;">
+      <summary>Перевірка даних (опціонально): прев’ю секцій</summary>
+      <div class="inlineHelp">Показано перші 200 рядків у кожній секції.</div>
+
+      <details style="margin-top:10px;">
+        <summary>Trades — перші 200</summary>
+        <div class="tableWrap"><table id="tblTrades"></table></div>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary>Dividends — перші 200</summary>
+        <div class="tableWrap"><table id="tblDiv"></table></div>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary>Withholding Tax — перші 200</summary>
+        <div class="tableWrap"><table id="tblWh"></table></div>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary>Open Positions — перші 200</summary>
+        <div class="tableWrap"><table id="tblPos"></table></div>
+      </details>
+    </details>
+
+    <div id="statusUpload" class="status">Статус: очікую файл.</div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="card wStep" data-step="2">
+    <h2>Крок 2/4 — Курси НБУ для перерахунку у гривню</h2>
+
+    <div id="fileSchemeBanner" class="status warn hidden"></div>
+
+    <div class="row">
+      <div class="field">
+        <label>Потрібні валюти та діапазон дат (визначається зі звіту)</label>
+        <div id="fxNeedSummary" class="status">Спочатку розпізнайте CSV (крок 1).</div>
+        <div class="progressWrap" aria-label="FX coverage">
+          <div class="progressBar" id="fxProgress"></div>
+        </div>
+        <div class="inlineHelp" id="fxCoverageText">Покриття: —</div>
+        <div id="fxMissingBox" class="status warn hidden"></div>
+      </div>
+
+      <div class="field">
+        <label>Статус завантажених курсів</label>
+        <div id="fxStatus" class="status">Курси ще не завантажені.</div>
+        <div class="inlineHelp">
+          Якщо «Завантажити НБУ» не працює, використайте fallback: посилання → збережіть JSON → «Підвантаж JSON‑файли».
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="drop" id="dropFx">
+      <div class="txt">
+        <div class="title">Перетягніть JSON‑файли курсів сюди</div>
+        <div class="sub">Підтримка: fx_bundle_v1 або raw‑масив НБУ (USD.json/EUR.json…).</div>
+      </div>
+      <div class="actions">
+        <input id="fxFiles" type="file" accept="application/json,.json" multiple class="hidden" />
+        <button id="btnPickFx" class="secondary" type="button">Обрати JSON</button>
+        <button id="btnLoadFxFiles" class="secondary" type="button">Підвантаж JSON‑файли</button>
+        <button id="btnDownloadFx" type="button" disabled>Завантажити курси НБУ (і застосувати)</button>
+      </div>
+    </div>
+
+    <div class="miniPills">
+      <div class="pill" id="fxFilesPill">JSON не обрано</div>
+      <button class="copyBtn" id="btnClearFx" type="button" disabled>Очистити курси</button>
+      <button class="copyBtn" id="btnShowFxLinks" type="button" disabled>Показати посилання (fallback)</button>
+      <button class="copyBtn" id="btnDownloadFxLinksFile" type="button" disabled>Завантажити файл посилань</button>
+    </div>
+
+    <div id="fxLinksBox" class="status hidden"></div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="card wStep" data-step="3">
+    <h2>Крок 3/4 — Налаштування та розрахунок</h2>
+
+    <div class="row">
+      <div class="field">
+        <label>Податковий рік</label>
+        <select id="taxYear">
+          <option value="2025" selected>2025</option>
+          <option value="2024">2024</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Метод обліку</label>
+        <select id="lotMethod" disabled>
+          <option value="FIFO" selected>FIFO</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <h3 class="small muted" style="margin:0 0 8px 0;">Ставки</h3>
+    <div class="row">
+      <div class="field">
+        <label>ПДФО на інвестприбуток (0.18)</label>
+        <input id="pitInvestRate" type="number" step="0.01" value="0.18" />
+      </div>
+      <div class="field">
+        <label>Військовий збір на інвестприбуток (0.05)</label>
+        <input id="milInvestRate" type="number" step="0.01" value="0.05" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>ПДФО на дивіденди нерезидента (0.09)</label>
+        <input id="pitDivRate" type="number" step="0.01" value="0.09" />
+      </div>
+      <div class="field">
+        <label>Військовий збір на дивіденди (0.05)</label>
+        <input id="milDivRate" type="number" step="0.01" value="0.05" />
+      </div>
+    </div>
+
+    <details style="margin-top:10px;">
+      <summary>Розширені налаштування</summary>
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <label>Перенесений інвестзбиток минулих років (грн)</label>
+          <input id="carryLossUAH" type="number" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label>Код виду інвестактиву для Ф1</label>
+          <select id="f1AssetTypeMode">
+            <option value="ALL_4" selected>За замовчуванням: усе = 4 (іноземні джерела)</option>
+            <option value="MANUAL">Ручна мапа (JSON)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" id="manualMapWrap" style="display:none;margin-top:10px;">
+        <label>Ручна мапа кодів Ф1 (JSON: {"ASSETKEY":4, ...})</label>
+        <textarea id="f1ManualMap" spellcheck="false">{}</textarea>
+      </div>
+
+      <div class="field" style="margin-top:10px;">
+        <label><input id="useForeignTaxCredit" type="checkbox" /> Враховувати залік іноземного податку за дивідендами (зменшує ПДФО, НЕ зменшує ВЗ)</label>
+      </div>
+
+      <div class="field">
+        <label><input id="treatPILasDividend" type="checkbox" checked /> “Payment in Lieu of Dividend” вважати дивідендами</label>
+      </div>
+
+      <div class="inlineHelp">
+        ⚠️ Якщо змінюєте ці параметри після розрахунку — натисніть «Розрахувати» ще раз.
+      </div>
+    </details>
+
+    <div class="btns">
+      <button id="btnCalc" type="button" disabled>Розрахувати податки</button>
+      <button id="btnDownloadDebug" class="secondary" type="button" disabled>DEBUG (JSON)</button>
+    </div>
+
+    <div id="statusCalc" class="status">Спочатку завершіть кроки 1–2.</div>
+
+    <div class="hr"></div>
+
+    <div class="cards3" id="taxCards" style="display:none;">
+      <div class="bigCard">
+        <div class="label">Інвестприбуток (Ф1)</div>
+        <div class="value" id="cardInvestProfit">—</div>
+        <div class="sub" id="cardInvestSub">—</div>
+      </div>
+      <div class="bigCard">
+        <div class="label">Дивіденди</div>
+        <div class="value" id="cardDivIncome">—</div>
+        <div class="sub" id="cardDivSub">—</div>
+      </div>
+      <div class="bigCard">
+        <div class="label">Разом до сплати</div>
+        <div class="value" id="cardTotal">—</div>
+        <div class="sub" id="cardTotalSub">—</div>
+      </div>
+    </div>
+
+    <div class="btns" id="exportBtns" style="display:none;margin-top:10px;">
+      <button id="btnExportXlsx" type="button" disabled>Завантажити XLSX (Summary + Декларація + Ф1 + Ops)</button>
+      <button id="btnExportCsv" class="secondary" type="button" disabled>Завантажити CSV (Ф1 + Ops)</button>
+      <button id="btnPrintF1" class="secondary" type="button" disabled>Друк Ф1 (PDF)</button>
+    </div>
+
+    <details id="declDetails" style="margin-top:10px;display:none;">
+      <summary>Куди переносити в декларацію (підказки)</summary>
+      <div class="inlineHelp">Натисніть «Копіювати» біля потрібної суми. Формат: 1'000.00</div>
+      <div class="tableWrap" style="margin-top:8px;">
+        <table id="declTable"></table>
+      </div>
+    </details>
+
+    <details id="f1Details" style="margin-top:10px;display:none;">
+      <summary>Таблиця Ф1</summary>
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <label>Пошук у Ф1 (назва / assetKey)</label>
+          <input id="f1Search" type="text" placeholder="Напр., AAPL або OPT|" />
+        </div>
+        <div class="field">
+          <label>Показано</label>
+          <div class="status" id="f1Info">—</div>
+        </div>
+      </div>
+      <div class="tableWrap"><table id="tblF1"></table></div>
+    </details>
+
+    <details id="opsDetails" style="margin-top:10px;display:none;">
+      <summary>Операції (FIFO‑зіставлення)</summary>
+
+      <div class="row" style="margin-top:10px;">
+        <div class="field">
+          <label>Пошук у Ops (assetKey)</label>
+          <input id="opsSearch" type="text" placeholder="Напр., STK|USD|AAPL або OPT|EUR|" />
+        </div>
+        <div class="field">
+          <label>Навігація</label>
+          <div class="btns" style="margin-top:0;">
+            <button id="opsPrev" class="secondary" type="button">←</button>
+            <button id="opsNext" class="secondary" type="button">→</button>
+            <button id="opsCopyCount" class="ghost" type="button">Копіювати кількість</button>
+          </div>
+          <div class="status" id="opsPageInfo">—</div>
+        </div>
+      </div>
+
+      <div class="tableWrap"><table id="tblOps"></table></div>
+    </details>
+
+    <div class="inlineHelp">
+      XLSX‑експорт використовує SheetJS через CDN. Якщо інтернет недоступний — користуйтеся CSV або друком.
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="card wStep" data-step="4">
+    <h2>Крок 4/4 — Відкриті позиції та потенційна оптимізація</h2>
+    <div class="small muted">
+      Показує позиції з найбільшими поточними збитками у гривні (за Unrealized P/L зі звіту IB та курсом НБУ).
+      Це не інвестпорада.
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div class="field">
+        <label>Дата FX для конвертації (за замовчуванням = кінець періоду звіту)</label>
+        <input id="asOfDate" type="text" placeholder="YYYY-MM-DD" />
+        <div class="small muted">Змінюється лише FX‑курс, не сам Unrealized P/L зі звіту.</div>
+      </div>
+      <div class="field">
+        <label>Показати топ N збиткових позицій</label>
+        <input id="topN" type="number" step="1" value="15" />
+      </div>
+    </div>
+
+    <div class="btns">
+      <button id="btnShowLosers" type="button" disabled>Показати</button>
+      <button id="btnCopyLosers" class="secondary" type="button" disabled>Копіювати таблицю (CSV)</button>
+    </div>
+
+    <div id="losersBox" class="status">Поки що немає даних.</div>
+    <div class="hr"></div>
+
+    <!-- Модуль моделювання податкових наслідків: Tax harvesting + опціони -->
+    <details id="simDetails" style="margin-top:10px;">
+      <summary>Моделювання: tax harvesting + опціони (по роках)</summary>
+
+      <div class="inlineHelp">
+        Цей блок — “what‑if” надбудова: він <b>не змінює</b> ваш основний FIFO‑розрахунок (Ф1) з кроку 3,
+        а рахує <b>дельту</b> для сценарію. Корисно, якщо ви ще <i>плануєте</i> продаж збиткової позиції
+        (наприклад, TLT) та хочете залишитись у ринку через <b>Call</b> (глибоко ITM).
+        <br/><br/>
+        ⚠️ Це не податкова консультація. Для складних кейсів (виконання опціону, перенос збитків, специфічні активи)
+        перевіряйте норми ПКУ та/або консультуйтесь із фахівцем.
+      </div>
+
+      <div class="hr"></div>
+
+      <h3 class="small muted" style="margin:0 0 8px 0;">База (поточний розрахунок з кроку 3)</h3>
+      <div class="cards3" id="simBaseCards">
+        <div class="bigCard">
+          <div class="label">Рік</div>
+          <div class="value" id="simBaseYear">—</div>
+          <div class="sub">Береться з налаштування “Податковий рік” у кроці 3.</div>
+        </div>
+        <div class="bigCard">
+          <div class="label">Разом до сплати (база)</div>
+          <div class="value" id="simBaseTotal">—</div>
+          <div class="sub"><span class="mono" id="simBaseBreakdown">—</span></div>
+        </div>
+        <div class="bigCard">
+          <div class="label">Інвест‑прибуток (база)</div>
+          <div class="value" id="simBaseInvestProfit">—</div>
+          <div class="sub">Ф1, рядок 3.1 (прибуток). Якщо збиток — 0.00.</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3 class="small muted" style="margin:0 0 8px 0;">Сценарій</h3>
+
+      <div class="row">
+        <div class="field">
+          <label>Оберіть актив для “tax harvesting” (опційно)</label>
+          <select id="simPickPosition">
+            <option value="">— (оберу вручну нижче)</option>
+          </select>
+          <div class="inlineHelp">            Найшвидший спосіб: натисніть <b>assetKey</b> у таблиці збиткових позицій вище — поля «Продаж» заповняться автоматично.
+            Або оберіть актив у списку (якщо він підвантажений) / введіть значення вручну нижче.</div>
+        </div>
+
+        <div class="field">
+          <label>Податкові роки для моделювання</label>
+          <div class="row" style="grid-template-columns:1fr 1fr;">
+            <div class="field">
+              <label class="small muted">Рік A (продаж/купівля)</label>
+              <select id="simYearA">
+                <option value="2025" selected>2025</option>
+                <option value="2024">2024</option>
+                <option value="2026">2026</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="small muted">Рік B (закриття/виконання опціону)</label>
+              <select id="simYearB">
+                <option value="">— (той самий рік)</option>
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+            </div>
+          </div>
+          <div class="inlineHelp">
+            Якщо опціон не закриваєте до кінця року — ефект може “перетекти” на наступний рік.
+          </div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3 class="small muted" style="margin:0 0 8px 0;">1) Продаж базового активу (фіксація збитку/прибутку)</h3>
+
+      <div class="row">
+        <div class="field">
+          <label>Актив (assetKey або тикер)</label>
+          <input id="simUnderlyingKey" type="text" placeholder="Напр., STK|USD|TLT або TLT" />
+          <div class="inlineHelp">Порада: якщо актив є у вашому звіті IB, краще використовувати assetKey.</div>
+        </div>
+        <div class="field">
+          <label>Кількість до продажу</label>
+          <input id="simSellQty" type="number" step="0.0001" value="0" />
+          <div class="inlineHelp">Для акцій/ETF — у штуках. Для опціонів — у контрактах.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Дата продажу</label>
+          <input id="simSellDate" type="text" placeholder="YYYY-MM-DD" />
+          <div class="inlineHelp">Для перерахунку в гривню використовується курс НБУ на цю дату.</div>
+        </div>
+        <div class="field">
+          <label>Грошовий результат продажу (у валюті угоди)</label>
+          <input id="simSellNetCash" type="number" step="0.01" value="0" />
+          <div class="inlineHelp">
+            Введіть <b>netCash</b> як у IB: для продажу це зазвичай <b>плюс</b>, для купівлі — <b>мінус</b>.
+            Якщо ви вводите лише ціну, використайте розширений режим нижче.
+          </div>
+        </div>
+      </div>
+
+      <details style="margin-top:10px;">
+        <summary>Розширено: продаж через ціну (якщо не знаєте netCash)</summary>
+
+        <div class="row" style="margin-top:10px;">
+          <div class="field">
+            <label>Валюта угоди</label>
+            <select id="simSellCcy">
+              <option value="USD" selected>USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="CHF">CHF</option>
+              <option value="PLN">PLN</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Ціна продажу за 1 шт.</label>
+            <input id="simSellPrice" type="number" step="0.0001" value="0" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Комісія (зазвичай від’ємна)</label>
+            <input id="simSellFee" type="number" step="0.01" value="0" />
+          </div>
+          <div class="field">
+            <label>Як рахувати netCash</label>
+            <select id="simSellCalcMode">
+              <option value="AUTO" selected>Авто: netCash = qty*price + fee (для продажу)</option>
+              <option value="MANUAL">Я ввожу netCash вручну (ігнорувати ціну)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="inlineHelp">
+          Якщо актив котирується в іншій валюті — обирайте валюту угоди.
+          Для опціону “qty” = кількість контрактів, ціна = премія за 1 контракт, multiplier враховується нижче.
+        </div>
+      </details>
+
+      <div class="hr"></div>
+
+      <h3 class="small muted" style="margin:0 0 8px 0;">2) Купівля Call (щоб зберегти експозицію)</h3>
+
+      <div class="row">
+        <div class="field">
+          <label>Опціон на (underlying)</label>
+          <input id="simOptUnderlying" type="text" placeholder="Напр., TLT" />
+          <div class="inlineHelp">Можна залишити порожнім — буде взято з поля “Актив”.</div>
+        </div>
+        <div class="field">
+          <label>Тип</label>
+          <select id="simOptRight">
+            <option value="C" selected>Call (C)</option>
+            <option value="P">Put (P)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Дата купівлі опціону</label>
+          <input id="simOptBuyDate" type="text" placeholder="YYYY-MM-DD" />
+        </div>
+        <div class="field">
+          <label>Експірація</label>
+          <input id="simOptExpiry" type="text" placeholder="YYYY-MM-DD" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Strike</label>
+          <input id="simOptStrike" type="number" step="0.01" value="0" />
+        </div>
+        <div class="field">
+          <label>Контрактів</label>
+          <input id="simOptContracts" type="number" step="1" value="1" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Мультиплікатор</label>
+          <input id="simOptMultiplier" type="number" step="1" value="100" />
+          <div class="inlineHelp">Для акційних опціонів зазвичай 100.</div>
+        </div>
+        <div class="field">
+          <label>Премія (за 1 контракт)</label>
+          <input id="simOptPremium" type="number" step="0.0001" value="0" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Валюта премії</label>
+          <select id="simOptCcy">
+            <option value="USD" selected>USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="CHF">CHF</option>
+            <option value="PLN">PLN</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Комісія (зазвичай від’ємна)</label>
+          <input id="simOptFee" type="number" step="0.01" value="0" />
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3 class="small muted" style="margin:0 0 8px 0;">3) Що далі з опціоном?</h3>
+
+      <div class="row">
+        <div class="field">
+          <label>Сценарій завершення</label>
+          <select id="simOptOutcome">
+            <option value="OPEN" selected>Тримаю на кінець року (без закриття)</option>
+            <option value="CLOSE">Закрив продажем опціону</option>
+            <option value="EXERCISE">Виконання/Assignment (опціон → базовий актив)</option>
+            <option value="EXPIRE">Експірація (0.00)</option>
+          </select>
+          <div class="inlineHelp">
+            Якщо опціон <b>не закрито</b> в році A — премія зазвичай не формує фінрезультат у Ф1 цього року,
+            а вплине в році закриття/експірації/виконання.
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Правило віднесення премії у моделюванні</label>
+          <select id="simPremiumRule">
+            <option value="ON_CLOSE" selected>Стандарт: премія враховується при закритті/експірації/виконанні</option>
+            <option value="ON_BUY">Оцінка: вважати премію витратами в день купівлі</option>
+          </select>
+          <div class="inlineHelp">
+            Рекомендовано залишити “Стандарт”. “Оцінка” корисна як стрес‑тест, але може відрізнятись від практики обліку.
+          </div>
+        </div>
+      </div>
+
+      <div id="simCloseWrap" class="hidden" style="margin-top:10px;">
+        <div class="row">
+          <div class="field">
+            <label>Дата закриття опціону</label>
+            <input id="simOptCloseDate" type="text" placeholder="YYYY-MM-DD" />
+          </div>
+          <div class="field">
+            <label>Премія закриття (за 1 контракт)</label>
+            <input id="simOptClosePremium" type="number" step="0.0001" value="0" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Комісія закриття (зазвичай від’ємна)</label>
+            <input id="simOptCloseFee" type="number" step="0.01" value="0" />
+          </div>
+          <div class="field">
+            <label>Підказка</label>
+            <div class="status">Опціон закривається як окрема інвест‑операція (Ф1). Премії та комісії входять у результат.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="simExerciseWrap" class="hidden" style="margin-top:10px;">
+        <div class="row">
+          <div class="field">
+            <label>Дата виконання/assignment</label>
+            <input id="simExerciseDate" type="text" placeholder="YYYY-MM-DD" />
+          </div>
+          <div class="field">
+            <label>Ціна базового активу (за 1 шт.) на дату виконання</label>
+            <input id="simExerciseStockPrice" type="number" step="0.0001" value="0" />
+          </div>
+        </div>
+        <div class="inlineHelp">
+          Для виконання потрібна прив’язка до операції з базовим активом (купівля/продаж за strike) та коректне включення премії у собівартість.
+          Це реалізується в надбудові як “синтетичні угоди” (не змінюючи ваш базовий FIFO).
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="btns">
+        <button id="btnSimRun" type="button" disabled>Розрахувати сценарій</button>
+        <button id="btnSimReset" class="secondary" type="button" disabled>Скинути сценарій</button>
+        <button id="btnSimUseLoser" class="ghost" type="button" disabled>Підставити зі збиткових позицій</button>
+      </div>
+
+      <div id="simStatus" class="status">Заповніть поля сценарію та натисніть “Розрахувати сценарій”.</div>
+
+      <div class="hr"></div>
+
+      <h3 class="small muted" style="margin:0 0 8px 0;">Результат по роках (база vs сценарій)</h3>
+      <div class="tableWrap"><table id="tblSimYears"></table></div>
+
+      <details style="margin-top:10px;">
+        <summary>Деталі подій сценарію</summary>
+        <div class="inlineHelp">Тут відображаються синтетичні події, які надбудова додає у “what‑if” розрахунок.</div>
+        <div class="tableWrap" style="margin-top:8px;"><table id="tblSimEvents"></table></div>
+      </details>
+
+      <details style="margin-top:10px;">
+        <summary>Пояснення (коротко): як це впливає на Ф1</summary>
+        <div class="inlineHelp">
+          <b>Продаж збиткової позиції</b> дає від’ємний фінрезультат у Ф1 в році продажу (якщо є прибуток, він може бути зменшений).
+          <br/>
+          <b>Купівля Call</b> — це витрата (премія), але <i>як правило</i> фінрезультат формується при закритті/експірації/виконанні.
+          Тому сценарій “продав у збиток + купив ITM Call” часто зменшує податок у році A, а потенційно збільшує у році B.
+          <br/><br/>
+          Надбудова показує ці ефекти окремо по роках, не змінюючи ваш базовий розрахунок.
+        </div>
+      </details>
+    </details>
+
+  </section>
+</main>
+
+<footer class="footerNav">
+  <div class="inner">
+    <div class="info" id="navInfo">Почніть з кроку 1: завантажте та розпізнайте CSV.</div>
+    <div class="navBtns">
+      <button id="btnBack" class="secondary" type="button" disabled>Назад</button>
+      <button id="btnNext" type="button" disabled>Далі</button>
+    </div>
+  </div>
+</footer>
+
+
+<div id="ariaLive" class="srOnly" aria-live="polite"></div>
+<div class="toast-container" id="toastContainer" aria-hidden="true"></div>
+
+
+<script>
+/* =========================
+   Helpers
+========================= */
+const $ = (sel) => document.querySelector(sel);
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function setStatus(el, msg, kind="") {
+  el.textContent = msg;
+  el.classList.remove("good","bad","warn");
+  if (kind) el.classList.add(kind);
+}
+
+function fmt2(x) {
+  if (!Number.isFinite(x)) return "—";
+  const neg = x < 0;
+  const v = Math.abs(x);
+  const s = (Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2);
+  let [intPart, decPart] = s.split(".");
+  intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+  return (neg ? "-" : "") + intPart + "." + decPart;
+}
+function round2(x){ return Math.round((x + Number.EPSILON) * 100) / 100; }
+
+function downloadBlob(filename, mime, textOrBlob) {
+  const blob = textOrBlob instanceof Blob ? textOrBlob : new Blob([textOrBlob], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function toCsv(rows) {
+  const esc = (v) => {
+    const s = String(v ?? "");
+    if (/[",\n\r]/.test(s)) return '"' + s.replaceAll('"','""') + '"';
+    return s;
+  };
+  return rows.map(r => r.map(esc).join(",")).join("\n");
+}
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); ta.remove(); return true; } catch { ta.remove(); return false; }
+  }
+}
+
+
+function announce(msg){
+  const el = $("#ariaLive");
+  if (!el) return;
+  // reset to make screen readers re-announce same text
+  el.textContent = "";
+  setTimeout(() => { el.textContent = String(msg || ""); }, 30);
+}
+
+function showToast(msg, type="info", timeout=3600){
+  const c = $("#toastContainer");
+  if (!c) return;
+
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = String(msg || "");
+  c.appendChild(t);
+
+  // make it screen-reader visible through ariaLive
+  announce(msg);
+
+  setTimeout(() => {
+    t.style.opacity = "0";
+    t.style.transform = "translateY(6px)";
+    t.style.transition = "opacity 180ms ease, transform 180ms ease";
+    setTimeout(() => t.remove(), 220);
+  }, timeout);
+}
+
+function makeClickableDrop(zoneSel, inputSel){
+  const z = $(zoneSel);
+  const inp = $(inputSel);
+  if (!z || !inp) return;
+
+  z.setAttribute("role","button");
+  z.setAttribute("tabindex","0");
+
+  z.addEventListener("click", (e) => {
+    // don't hijack clicks on buttons inside the zone
+    if (e.target.closest("button, input, a, summary")) return;
+    inp.click();
+  });
+  z.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      inp.click();
+    }
+  });
+}
+
+
+
+/* =========================
+   CSV parsing
+========================= */
+function stripBom(s){ return s && s.charCodeAt(0) === 0xFEFF ? s.slice(1) : s; }
+
+function parseNumber(s) {
+  if (s === null || s === undefined) return null;
+  let x = String(s).trim();
+  if (!x) return null;
+  const m = x.match(/^\((.*)\)$/);
+  if (m) x = "-" + m[1];
+  x = x.replaceAll(",", "");
+  const v = Number(x);
+  return Number.isFinite(v) ? v : null;
+}
+
+function parseCSV(text) {
+  text = stripBom(text);
+  const rows = [];
+  let row = [];
+  let field = "";
+  let i = 0;
+  let inQuotes = false;
+
+  while (i < text.length) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      field += c; i++; continue;
+    } else {
+      if (c === '"') { inQuotes = true; i++; continue; }
+      if (c === ",") { row.push(field); field = ""; i++; continue; }
+      if (c === "\r") { i++; continue; }
+      if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; i++; continue; }
+      field += c; i++; continue;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function rowToObject(header, data) {
+  const obj = {};
+  for (let i = 0; i < header.length; i++) {
+    const k = header[i];
+    if (!k) continue;
+    obj[k] = data[i] ?? "";
+  }
+  return obj;
+}
+
+/* =========================
+   Dates
+========================= */
+const EN_MONTH = {
+  january:1,february:2,march:3,april:4,may:5,june:6,
+  july:7,august:8,september:9,october:10,november:11,december:12,
+};
+function pad2(n){ return n < 10 ? "0"+n : String(n); }
+function parseEnglishDate(s) {
+  const t = String(s).trim();
+  const m = t.match(/^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/);
+  if (!m) return null;
+  const mon = EN_MONTH[m[1].toLowerCase()];
+  if (!mon) return null;
+  const day = Number(m[2]);
+  const year = Number(m[3]);
+  if (!(day>=1 && day<=31)) return null;
+  return `${year}-${pad2(mon)}-${pad2(day)}`;
+}
+function parsePeriodRange(s){
+  const t = String(s).trim();
+  const parts = t.split(" - ");
+  if (parts.length !== 2) return null;
+  const a = parseEnglishDate(parts[0]);
+  const b = parseEnglishDate(parts[1]);
+  if (!a || !b) return null;
+  return { start:a, end:b };
+}
+function parseIBDateTime(s) {
+  const t = String(s).trim();
+  const parts = t.split(",").map(x => x.trim());
+  const date = parts[0];
+  const time = parts[1] ? parts[1] : "00:00:00";
+  return { iso:`${date}T${time}`, tradeDate:date };
+}
+function minIso(a,b){ if(!a) return b; if(!b) return a; return a < b ? a : b; }
+function maxIso(a,b){ if(!a) return b; if(!b) return a; return a > b ? a : b; }
+
+/* =========================
+   Options parser + assetKey
+========================= */
+const MONTHS = { JAN:1,FEB:2,MAR:3,APR:4,MAY:5,JUN:6,JUL:7,AUG:8,SEP:9,OCT:10,NOV:11,DEC:12 };
+
+function parseIbExpiryToken(token) {
+  const t = String(token || "").trim().toUpperCase();
+  const m = t.match(/^(\d{1,2})([A-Z]{3})(\d{2})$/);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const mon = MONTHS[m[2]];
+  const yy = Number(m[3]);
+  if (!mon || day<1 || day>31) return null;
+  const year = yy <= 69 ? 2000 + yy : 1900 + yy;
+  return `${year}-${pad2(mon)}-${pad2(day)}`;
+}
+function parseIbOptionSymbol(symbolRaw) {
+  const s = String(symbolRaw || "").trim().replace(/\s+/g, " ");
+  const parts = s.split(" ");
+  if (parts.length < 4) return null;
+  const rightToken = parts[parts.length-1].toUpperCase();
+  const strikeToken = parts[parts.length-2];
+  const expiryToken = parts[parts.length-3];
+  if (rightToken !== "C" && rightToken !== "P") return null;
+  const expiry = parseIbExpiryToken(expiryToken);
+  if (!expiry) return null;
+  const strike = Number(strikeToken);
+  if (!Number.isFinite(strike)) return null;
+  const underlying = parts.slice(0, parts.length-3).join(" ");
+  if (!underlying) return null;
+  return { kind:"OPTION", underlying, expiry, strike, right:rightToken, multiplier:100 };
+}
+function makeAssetKey(assetCategory, currency, symbolRaw) {
+  const opt = parseIbOptionSymbol(symbolRaw);
+  if (opt) {
+    return {
+      assetKey: `OPT|${currency}|${opt.underlying}|${opt.expiry}|${opt.strike}|${opt.right}`,
+      instrument: opt,
+      kind: "OPTION"
+    };
+  }
+  const sym = String(symbolRaw || "").trim().replace(/\s+/g, "");
+  return { assetKey:`STK|${currency}|${sym}`, instrument:{kind:"STOCK"}, kind:"STOCK" };
+}
+function extractSymbolIsinFromDescription(desc) {
+  const s = String(desc || "").trim();
+  const m = s.match(/^([A-Z0-9.\-]+)\(([A-Z]{2}[A-Z0-9]{10})\)/);
+  if (!m) return null;
+  return { symbol:m[1], isin:m[2] };
+}
+
+/* =========================
+   Statement parser
+========================= */
+function emptyStatement(fileName) {
+  return {
+    meta:{
+      provider:"IB_FLEX_CSV",
+      fileName,
+      brokerName:null,
+      brokerAddress:null,
+      title:null,
+      periodStart:null,
+      periodEnd:null,
+      generatedAt:null,
+      asOfDate:null,
+    },
+    accounts:[],
+    trades:[],
+    cashIncomes:[],
+    withholdings:[],
+    positions:[],
+    warnings:[],
+  };
+}
+function warn(st, code, message, extra={}){ st.warnings.push({code,message,...extra}); }
+
+function parseFlexReport(rows, fileName) {
+  const st = emptyStatement(fileName);
+  const headers = new Map();
+  const seenStatementFields = new Set();
+
+  for (let rowIndex=0; rowIndex<rows.length; rowIndex++) {
+    const row = rows[rowIndex];
+    if (!row || row.length < 2) continue;
+
+    const section = stripBom(String(row[0]||"")).trim();
+    const type = String(row[1]||"").trim();
+    const rest = row.slice(2);
+
+    if (type === "Header") {
+      headers.set(section, rest);
+      continue;
+    }
+    if (type !== "Data") continue;
+
+    const header = headers.get(section);
+    if (!header) continue;
+    const obj = rowToObject(header, rest);
+
+    if (section === "Statement") {
+      const fn = String(obj["Field Name"]||"").trim();
+      const fv = String(obj["Field Value"]||"").trim();
+      if (!fn) continue;
+      if (seenStatementFields.has(fn)) continue;
+      seenStatementFields.add(fn);
+
+      if (fn === "BrokerName") st.meta.brokerName = fv;
+      if (fn === "BrokerAddress") st.meta.brokerAddress = fv;
+      if (fn === "Title") st.meta.title = fv;
+      if (fn === "Period") {
+        const pr = parsePeriodRange(fv);
+        if (pr) {
+          st.meta.periodStart = pr.start;
+          st.meta.periodEnd = pr.end;
+          st.meta.asOfDate = pr.end;
+        } else {
+          warn(st,"UNPARSEABLE_META",`Не вдалося розпізнати Period: ${fv}`,{section,row:rowIndex+1});
+        }
+      }
+      if (fn === "WhenGenerated") st.meta.generatedAt = fv;
+      continue;
+    }
+
+    if (section === "Account Summary") {
+      const account = String(obj["Account"]||"").trim();
+      if (!account || account.toLowerCase() === "total") continue;
+      st.accounts.push({
+        currency:String(obj["Currency"]||"").trim(),
+        accountId:account,
+        alias:String(obj["Account Alias"]||"").trim(),
+        name:String(obj["Name"]||"").trim(),
+        priorNAV:parseNumber(obj["Prior NAV"]),
+        currentNAV:parseNumber(obj["Current NAV"]),
+        twr:String(obj["TWR"]||"").trim(),
+      });
+      continue;
+    }
+
+    if (section === "Trades") {
+      const assetCategory = String(obj["Asset Category"]||"").trim();
+      const currency = String(obj["Currency"]||"").trim();
+      const symbolRaw = String(obj["Symbol"]||"").trim();
+      const dtRaw = String(obj["Date/Time"]||"").trim();
+
+      const qty = parseNumber(obj["Quantity"]);
+      const tPrice = parseNumber(obj["T. Price"]);
+      const proceeds = parseNumber(obj["Proceeds"]);
+      const comm = parseNumber(obj["Comm/Fee"]) ?? 0;
+
+      if (!currency || !symbolRaw || !dtRaw || qty === null || proceeds === null) continue;
+
+      const { iso, tradeDate } = parseIBDateTime(dtRaw);
+      const ak = makeAssetKey(assetCategory, currency, symbolRaw);
+      const netCash = (proceeds ?? 0) + (comm ?? 0);
+
+      st.trades.push({
+        id:`${fileName}:Trades:${rowIndex+1}`,
+        asset:{assetCategory,currency,symbolRaw,instrument:ak.instrument,assetKey:ak.assetKey,kind:ak.kind},
+        dateTime:iso,
+        tradeDate,
+        quantity:qty,
+        tradePrice:tPrice,
+        proceeds,
+        commission:comm,
+        netCash,
+      });
+      continue;
+    }
+
+    if (section === "Dividends") {
+      const currency = String(obj["Currency"]||"").trim();
+      const date = String(obj["Date"]||"").trim();
+      const desc = String(obj["Description"]||"").trim();
+      const amount = parseNumber(obj["Amount"]);
+      if (!currency || !date || amount === null) continue;
+
+      let kind = "OTHER";
+      const dlow = desc.toLowerCase();
+      if (dlow.includes("payment in lieu")) kind = "PIL_DIVIDEND";
+      else if (dlow.includes("cash dividend")) kind = "DIVIDEND";
+
+      const si = extractSymbolIsinFromDescription(desc);
+
+      st.cashIncomes.push({
+        id:`${fileName}:Dividends:${rowIndex+1}`,
+        kind,currency,date,amount,
+        description:desc,
+        symbolHint:si ? si.symbol : null,
+        isinHint:si ? si.isin : null,
+      });
+      continue;
+    }
+
+    if (section === "Withholding Tax") {
+      const currency = String(obj["Currency"]||"").trim();
+      const date = String(obj["Date"]||"").trim();
+      const desc = String(obj["Description"]||"").trim();
+      const amount = parseNumber(obj["Amount"]);
+      if (!currency || !date || amount === null) continue;
+
+      const si = extractSymbolIsinFromDescription(desc);
+
+      st.withholdings.push({
+        id:`${fileName}:Withholding:${rowIndex+1}`,
+        currency,date,amount,
+        description:desc,
+        symbolHint:si ? si.symbol : null,
+        isinHint:si ? si.isin : null,
+      });
+      continue;
+    }
+
+    if (section === "Open Positions") {
+      const assetCategory = String(obj["Asset Category"]||"").trim();
+      const currency = String(obj["Currency"]||"").trim();
+      const symbolRaw = String(obj["Symbol"]||"").trim();
+      const qty = parseNumber(obj["Quantity"]);
+      const costBasis = parseNumber(obj["Cost Basis"]);
+      const value = parseNumber(obj["Value"]);
+      const upl = parseNumber(obj["Unrealized P/L"]);
+      if (!currency || !symbolRaw || qty === null || costBasis === null || value === null || upl === null) continue;
+
+      const ak = makeAssetKey(assetCategory, currency, symbolRaw);
+
+      st.positions.push({
+        id:`${fileName}:OpenPositions:${rowIndex+1}`,
+        asset:{assetCategory,currency,symbolRaw,instrument:ak.instrument,assetKey:ak.assetKey,kind:ak.kind},
+        quantity:qty,
+        costBasis,
+        value,
+        unrealizedPL:upl,
+      });
+      continue;
+    }
+  }
+
+  if (!st.meta.periodStart || !st.meta.periodEnd) {
+    const m = String(fileName).match(/_(\d{8})_(\d{8})/);
+    if (m) {
+      const a = `${m[1].slice(0,4)}-${m[1].slice(4,6)}-${m[1].slice(6,8)}`;
+      const b = `${m[2].slice(0,4)}-${m[2].slice(4,6)}-${m[2].slice(6,8)}`;
+      st.meta.periodStart = a;
+      st.meta.periodEnd = b;
+      st.meta.asOfDate = b;
+      warn(st,"META_FROM_FILENAME",`Період взято з назви файлу: ${a} — ${b}`);
+    }
+  }
+
+  // FIFO warning: first trade is SELL
+  const byAsset = new Map();
+  const sorted = st.trades.slice().sort((a,b)=>a.dateTime.localeCompare(b.dateTime));
+  for (const t of sorted) {
+    if (!byAsset.has(t.asset.assetKey)) byAsset.set(t.asset.assetKey, []);
+    byAsset.get(t.asset.assetKey).push(t);
+  }
+  for (const [assetKey, arr] of byAsset.entries()) {
+    const first = arr[0];
+    if (first && first.quantity < 0) {
+      warn(st,"INSUFFICIENT_HISTORY_FOR_FIFO",
+        `Актив ${assetKey}: перша угода у файлі — SELL. Якщо це не шорт, для коректного FIFO потрібна більш рання історія.`,
+        {assetKey}
+      );
+    }
+  }
+
+  return st;
+}
+
+/* =========================
+   Asset index for F1 names
+========================= */
+function buildAssetIndex(statement) {
+  const index = new Map();
+  const upsert = (m) => {
+    const cur = index.get(m.assetKey);
+    index.set(m.assetKey, cur ? ({...cur, ...m}) : ({...m}));
+  };
+
+  for (const t of statement.trades) {
+    const k = t.asset.assetKey;
+    const ccy = t.asset.currency;
+    if (t.asset.instrument && t.asset.instrument.kind === "OPTION") {
+      const o = t.asset.instrument;
+      upsert({ assetKey:k, kind:"OPTION", currency:ccy, underlying:o.underlying, expiry:o.expiry, strike:o.strike, right:o.right, multiplier:o.multiplier });
+    } else {
+      const sym = k.split("|")[2] ?? t.asset.symbolRaw;
+      upsert({ assetKey:k, kind:"STOCK", currency:ccy, symbol:sym });
+    }
+  }
+
+  for (const p of statement.positions) {
+    const k = p.asset.assetKey;
+    const ccy = p.asset.currency;
+    if (p.asset.instrument && p.asset.instrument.kind === "OPTION") {
+      const o = p.asset.instrument;
+      upsert({ assetKey:k, kind:"OPTION", currency:ccy, underlying:o.underlying, expiry:o.expiry, strike:o.strike, right:o.right, multiplier:o.multiplier });
+    } else {
+      const sym = k.split("|")[2] ?? p.asset.symbolRaw;
+      upsert({ assetKey:k, kind:"STOCK", currency:ccy, symbol:sym });
+    }
+  }
+
+  for (const ci of statement.cashIncomes) {
+    const si = extractSymbolIsinFromDescription(ci.description);
+    if (!si) continue;
+    const assetKey = `STK|${ci.currency}|${si.symbol}`;
+    upsert({ assetKey, kind:"STOCK", currency:ci.currency, symbol:si.symbol, isin:si.isin });
+  }
+  for (const w of statement.withholdings) {
+    const si = extractSymbolIsinFromDescription(w.description);
+    if (!si) continue;
+    const assetKey = `STK|${w.currency}|${si.symbol}`;
+    upsert({ assetKey, kind:"STOCK", currency:w.currency, symbol:si.symbol, isin:si.isin });
+  }
+
+  return index;
+}
+function humanNameFromAssetKey(assetIndex, assetKey) {
+  const m = assetIndex.get(assetKey);
+  if (!m) return assetKey;
+  if (m.kind === "STOCK") {
+    const isinPart = m.isin ? ` (ISIN ${m.isin})` : "";
+    return `Акції/ETF: ${m.symbol ?? assetKey}${isinPart}, ${m.currency}`;
+  }
+  if (m.kind === "OPTION") {
+    const cp = m.right === "C" ? "Call" : "Put";
+    const mult = m.multiplier ? `, ×${m.multiplier}` : "";
+    return `Опціон ${cp} на ${m.underlying}, exp ${m.expiry}, strike ${m.strike}${mult}, ${m.currency}`;
+  }
+  return assetKey;
+}
+
+/* =========================
+   NBU FX URLs + parsing
+========================= */
+function isoToYyyymmdd(iso){ return String(iso).replaceAll("-", ""); }
+function ddmmyyyy_to_iso(s) {
+  const t = String(s || "").trim();
+  const m = t.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (!m) return null;
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+function buildNbuRangeUrl(ccy, startIso, endIso) {
+  const start = isoToYyyymmdd(startIso);
+  const end = isoToYyyymmdd(endIso);
+  return `https://bank.gov.ua/NBU_Exchange/exchange_site?start=${start}&end=${end}&valcode=${encodeURIComponent(String(ccy).toLowerCase())}&sort=exchangedate&order=desc&json=`;
+}
+
+/* =========================
+   FX store
+========================= */
+const fxStore = {
+  maps: new Map(),
+  meta: { provider:null, range:null, currencies:[], loadedAt:null }
+};
+function fxClear(){
+  fxStore.maps.clear();
+  fxStore.meta = { provider:null, range:null, currencies:[], loadedAt:null };
+}
+function fxCurrenciesLoaded(){ return Array.from(fxStore.maps.keys()).sort(); }
+
+function fxRateSync(currency, isoDate) {
+  const ccy = String(currency||"").toUpperCase();
+  if (ccy === "UAH") return 1;
+  const mp = fxStore.maps.get(ccy);
+  if (!mp) return null;
+  if (mp.has(isoDate)) return mp.get(isoDate);
+
+  // fallback: попередній робочий день (до 10 днів)
+  let d = new Date(isoDate + "T00:00:00");
+  for (let i=0; i<10; i++) {
+    d.setDate(d.getDate() - 1);
+    const iso = d.toISOString().slice(0,10);
+    if (mp.has(iso)) return mp.get(iso);
+  }
+  return null;
+}
+
+function loadFxFromBundle(bundle) {
+  fxStore.maps.clear();
+  const currencies = [];
+  for (const [ccy0, dateMap] of Object.entries(bundle.currencies || {})) {
+    const ccy = String(ccy0).toUpperCase();
+    const mp = new Map();
+    for (const [d, r] of Object.entries(dateMap || {})) {
+      const rate = Number(r);
+      if (!Number.isFinite(rate)) continue;
+      mp.set(d, rate);
+    }
+    if (mp.size) {
+      fxStore.maps.set(ccy, mp);
+      currencies.push(ccy);
+    }
+  }
+  fxStore.meta.provider = "BUNDLE";
+  fxStore.meta.range = bundle.range || null;
+  fxStore.meta.currencies = currencies.sort();
+  fxStore.meta.loadedAt = new Date().toISOString();
+}
+
+function loadFxFromNbuArray(nbuArray) {
+  if (!Array.isArray(nbuArray)) throw new Error("JSON НБУ: очікую масив.");
+  let ccy = null;
+  for (const it of nbuArray) { if (it && it.cc) { ccy = String(it.cc).toUpperCase(); break; } }
+  if (!ccy) throw new Error("JSON НБУ: не знайдено код валюти (поле cc).");
+
+  const mp = fxStore.maps.get(ccy) ?? new Map();
+  for (const it of nbuArray) {
+    const iso = ddmmyyyy_to_iso(it.exchangedate);
+    if (!iso) continue;
+    const rate = Number(it.rate);
+    if (!Number.isFinite(rate)) continue;
+    mp.set(iso, rate);
+  }
+  fxStore.maps.set(ccy, mp);
+  fxStore.meta.provider = fxStore.meta.provider || "NBU_FILES";
+  fxStore.meta.loadedAt = new Date().toISOString();
+}
+
+async function loadFxFromFiles(files, progressCb) {
+  if (!files || !files.length) throw new Error("Не обрано JSON‑файли курсів.");
+  const progress = progressCb || (()=>{});
+  let loadedBundle = false;
+
+  for (const f of files) {
+    progress(`Читаю ${f.name}…`);
+    const text = await f.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error(`Файл ${f.name}: це не JSON.`); }
+
+    if (data && data.format === "fx_bundle_v1" && data.currencies) {
+      loadFxFromBundle(data);
+      loadedBundle = true;
+      progress(`Завантажено bundle: ${fxCurrenciesLoaded().join(", ") || "—"}`);
+      continue;
+    }
+
+    if (Array.isArray(data)) {
+      loadFxFromNbuArray(data);
+      progress(`Завантажено (raw НБУ): ${fxCurrenciesLoaded().join(", ") || "—"}`);
+      continue;
+    }
+
+    throw new Error(`Файл ${f.name}: невідомий формат (очікую fx_bundle_v1 або raw‑масив НБУ).`);
+  }
+
+  if (!loadedBundle) {
+    fxStore.meta.currencies = fxCurrenciesLoaded();
+  }
+}
+
+async function downloadNbuFxBundleOnline(needs, progressCb) {
+  const progress = progressCb || (()=>{});
+  const bundle = {
+    format:"fx_bundle_v1",
+    provider:"NBU",
+    generatedAt:new Date().toISOString(),
+    range:{ start:needs.startIso, end:needs.endIso },
+    currencies:{}
+  };
+
+  for (const ccy of needs.currencies) {
+    progress(`Завантажую ${ccy}…`);
+    const url = buildNbuRangeUrl(ccy, needs.startIso, needs.endIso);
+
+    let res;
+    try { res = await fetch(url); }
+    catch {
+      throw new Error(
+        `Не вдалося завантажити курси НБУ автоматично (Failed to fetch).\n\n`+
+        `Що робити:\n`+
+        `1) Натисніть “Показати посилання (fallback)” і збережіть JSON вручну\n`+
+        `2) Або відкрийте HTML через локальний сервер: python -m http.server 8000\n\n`+
+        `URL: ${url}`
+      );
+    }
+    if (!res.ok) throw new Error(`НБУ: HTTP ${res.status} для ${ccy}`);
+
+    const data = await res.json();
+    const map = {};
+    for (const it of data) {
+      const iso = ddmmyyyy_to_iso(it.exchangedate);
+      if (!iso) continue;
+      const rate = Number(it.rate);
+      if (!Number.isFinite(rate)) continue;
+      map[iso] = rate;
+    }
+    if (Object.keys(map).length === 0) throw new Error(`НБУ: порожні дані для ${ccy}.`);
+
+    bundle.currencies[ccy] = map;
+  }
+
+  progress(`Готово ✅ Валют: ${Object.keys(bundle.currencies).length}`);
+  return bundle;
+}
+
+/* =========================
+   FX needs + links + coverage
+========================= */
+function computeFxNeeds(statement, taxYear) {
+  const yPrefix = String(taxYear) + "-";
+  let minDate = null;
+  let maxDate = null;
+
+  for (const t of statement.trades) {
+    minDate = minIso(minDate, t.tradeDate);
+    maxDate = maxIso(maxDate, t.tradeDate);
+  }
+
+  for (const ci of statement.cashIncomes) {
+    if (!ci.date || !ci.date.startsWith(yPrefix)) continue;
+    minDate = minIso(minDate, ci.date);
+    maxDate = maxIso(maxDate, ci.date);
+  }
+  for (const w of statement.withholdings) {
+    if (!w.date || !w.date.startsWith(yPrefix)) continue;
+    minDate = minIso(minDate, w.date);
+    maxDate = maxIso(maxDate, w.date);
+  }
+
+  const asOf = statement.meta.asOfDate || statement.meta.periodEnd;
+  if (asOf) { minDate = minIso(minDate, asOf); maxDate = maxIso(maxDate, asOf); }
+
+  if (!minDate) minDate = statement.meta.periodStart || `${taxYear}-01-01`;
+  if (!maxDate) maxDate = statement.meta.periodEnd || `${taxYear}-12-31`;
+
+  const curSet = new Set();
+  for (const t of statement.trades) curSet.add(t.asset.currency);
+  for (const ci of statement.cashIncomes) if (ci.date && ci.date.startsWith(yPrefix)) curSet.add(ci.currency);
+  for (const w of statement.withholdings) if (w.date && w.date.startsWith(yPrefix)) curSet.add(w.currency);
+  for (const p of statement.positions) curSet.add(p.asset.currency);
+  curSet.delete("UAH");
+
+  return { startIso:minDate, endIso:maxDate, currencies:Array.from(curSet).sort() };
+}
+
+function buildFxLinksHtml(needs) {
+  const items = needs.currencies.map(ccy => {
+    const url = buildNbuRangeUrl(ccy, needs.startIso, needs.endIso);
+    return `• <b>${escapeHtml(ccy)}</b>: <a target="_blank" rel="noreferrer" href="${escapeHtml(url)}">${escapeHtml(url)}</a>`;
+  });
+
+  const intro = [
+    `<b>Посилання НБУ (JSON)</b><br/>`,
+    `Діапазон: <span class="mono">${escapeHtml(needs.startIso)} → ${escapeHtml(needs.endIso)}</span><br/>`,
+    `Валюти: <span class="mono">${escapeHtml(needs.currencies.join(", ") || "—")}</span><br/><br/>`,
+    `<b>Як зробити офлайн‑курси:</b><br/>`,
+    `1) Відкрийте кожне посилання<br/>`,
+    `2) Збережіть JSON (наприклад USD.json, EUR.json)<br/>`,
+    `3) Підвантажте файли у кроці 2<br/><br/>`,
+  ].join("");
+
+  return intro + items.join("<br/>");
+}
+
+function downloadFxLinksFile(needs) {
+  const html = `
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8" />
+<title>Посилання НБУ</title></head>
+<body style="font-family:Arial,sans-serif;">
+  <h2>Посилання НБУ (JSON)</h2>
+  <p><b>Діапазон:</b> ${needs.startIso} → ${needs.endIso}</p>
+  <p><b>Валюти:</b> ${needs.currencies.join(", ")}</p>
+  <p>Відкрийте кожне посилання, збережіть JSON (USD.json/EUR.json...), потім завантажте їх у калькулятор.</p>
+  <ul>
+    ${needs.currencies.map(ccy => {
+      const url = buildNbuRangeUrl(ccy, needs.startIso, needs.endIso);
+      return `<li><b>${ccy}</b>: <a href="${url}" target="_blank" rel="noreferrer">${url}</a></li>`;
+    }).join("\n")}
+  </ul>
+</body></html>`;
+  downloadBlob(`nbu_fx_links_${needs.startIso}_${needs.endIso}.html`, "text/html;charset=utf-8", html);
+}
+
+function getFxCoverageReport(statement, taxYear) {
+  if (!statement) return { ready:false, pct:0, needs:null, missing:[], missingText:"" };
+  const needs = computeFxNeeds(statement, taxYear);
+  if (!needs.currencies.length) {
+    return { ready:true, pct:100, needs, missing:[], missingText:"Валюти не потрібні (усе у UAH)." };
+  }
+
+  // збираємо дати, які реально потрібні
+  const needDates = new Map();
+  const add = (ccy, date) => {
+    const C = String(ccy||"").toUpperCase();
+    if (!C || C === "UAH" || !date) return;
+    if (!needDates.has(C)) needDates.set(C, new Set());
+    needDates.get(C).add(date);
+  };
+
+  for (const t of statement.trades) add(t.asset.currency, t.tradeDate);
+
+  const yPrefix = String(taxYear) + "-";
+  for (const ci of statement.cashIncomes) if (ci.date && ci.date.startsWith(yPrefix)) add(ci.currency, ci.date);
+  for (const w of statement.withholdings) if (w.date && w.date.startsWith(yPrefix)) add(w.currency, w.date);
+
+  const asOf = statement.meta.asOfDate || statement.meta.periodEnd;
+  if (asOf) for (const p of statement.positions) add(p.asset.currency, asOf);
+
+  const missing = [];
+  for (const [ccy, set] of needDates.entries()) {
+    if (!fxStore.maps.has(ccy)) {
+      missing.push(`${ccy} @ (немає даних по валюті)`);
+      if (missing.length >= 30) break;
+      continue;
+    }
+    for (const d of set.values()) {
+      const r = fxRateSync(ccy, d);
+      if (!r) {
+        missing.push(`${ccy} @ ${d}`);
+        if (missing.length >= 30) break;
+      }
+    }
+    if (missing.length >= 30) break;
+  }
+
+  // простий % по валютах (не по датах) — для UX
+  const loaded = fxCurrenciesLoaded();
+  const needCount = needs.currencies.length;
+  const loadedCount = needs.currencies.filter(c => loaded.includes(String(c).toUpperCase())).length;
+  const pct = Math.round((loadedCount / Math.max(1, needCount)) * 100);
+
+  return {
+    ready: missing.length === 0,
+    pct,
+    needs,
+    missing,
+    missingText: missing.length ? ("Приклади пропусків:\n• " + missing.join("\n• ")) : "Курси виглядають повними ✅"
+  };
+}
+
+/* =========================
+   FIFO engine (cashflow-based)
+========================= */
+function sign(x){ return x>0?1:x<0?-1:0; }
+function abs(x){ return Math.abs(x); }
+function allocPart(total, partQtyAbs, totalQtyAbs) {
+  if (totalQtyAbs === 0) return 0;
+  return total * (partQtyAbs / totalQtyAbs);
+}
+
+async function fifoInUAH(trades) {
+  const sorted = trades.slice().sort((a,b)=>a.dateTime.localeCompare(b.dateTime));
+  const books = new Map();
+  const matches = [];
+
+  for (const tr of sorted) {
+    const assetKey = tr.asset.assetKey;
+    const date = tr.tradeDate;
+
+    const rate = fxRateSync(tr.asset.currency, date);
+    if (!rate) throw new Error(`Немає курсу для ${tr.asset.currency} на ${date}.`);
+
+    let qtyRem = tr.quantity;
+    let cashRemUAH = tr.netCash * rate;
+
+    let queue = books.get(assetKey) || [];
+
+    while (queue.length > 0 && sign(qtyRem) !== 0 && sign(qtyRem) !== sign(queue[0].qtySigned)) {
+      const lot = queue[0];
+
+      const lotQtyAbs = abs(lot.qtySigned);
+      const trQtyAbs  = abs(qtyRem);
+      const matchQtyAbs = Math.min(lotQtyAbs, trQtyAbs);
+
+      const lotCashPart = allocPart(lot.cashUAH, matchQtyAbs, lotQtyAbs);
+      const trCashPart  = allocPart(cashRemUAH, matchQtyAbs, trQtyAbs);
+
+      const openCashUAH  = lotCashPart;
+      const closeCashUAH = trCashPart;
+
+      const incomeUAH  = Math.max(openCashUAH, 0) + Math.max(closeCashUAH, 0);
+      const expenseUAH = -Math.min(openCashUAH, 0) + -Math.min(closeCashUAH, 0);
+      const pnlUAH     = openCashUAH + closeCashUAH;
+
+      matches.push({
+        assetKey,
+        qtyAbs: matchQtyAbs,
+        openDate: lot.openDate,
+        closeDate: date,
+        incomeUAH,
+        expenseUAH,
+        pnlUAH,
+      });
+
+      const lotS = sign(lot.qtySigned);
+      lot.qtySigned = lot.qtySigned - lotS * matchQtyAbs;
+      lot.cashUAH   = lot.cashUAH   - lotCashPart;
+
+      const trS = sign(qtyRem);
+      qtyRem     = qtyRem     - trS * matchQtyAbs;
+      cashRemUAH = cashRemUAH - trCashPart;
+
+      if (abs(lot.qtySigned) < 1e-12) queue.shift();
+    }
+
+    if (abs(qtyRem) >= 1e-12) {
+      queue.push({ qtySigned: qtyRem, cashUAH: cashRemUAH, openDate: date });
+    }
+    books.set(assetKey, queue);
+  }
+
+  return { matches, books };
+}
+
+/* =========================
+   F1 + dividends taxes
+========================= */
+function buildF1ModeFromUI() {
+  const mode = $("#f1AssetTypeMode").value;
+  if (mode === "MANUAL") {
+    try {
+      const m = JSON.parse($("#f1ManualMap").value || "{}");
+      return { mode: "MANUAL", map: m };
+    } catch {
+      return { mode: "MANUAL", map: {} };
+    }
+  }
+  return { mode: "ALL_4" };
+}
+function inferF1AssetType(assetKey, f1Mode) {
+  if (f1Mode.mode === "ALL_4") return 4;
+  const v = f1Mode.map?.[assetKey];
+  if (v === 1 || v === 2 || v === 3 || v === 4) return v;
+  return 4;
+}
+
+function buildF1Model(statement, assetIndex, matches, settings) {
+  const y = String(settings.taxYear) + "-";
+  const inYear = matches.filter(m => m.closeDate.startsWith(y));
+
+  const byAsset = new Map();
+  for (const m of inYear) {
+    const cur = byAsset.get(m.assetKey) || { income: 0, cost: 0, result: 0 };
+    cur.income += m.incomeUAH;
+    cur.cost   += m.expenseUAH;
+    cur.result += m.pnlUAH;
+    byAsset.set(m.assetKey, cur);
+  }
+
+  let n = 1;
+  const rows = [];
+  for (const [assetKey, agg] of byAsset.entries()) {
+    rows.push({
+      n: n++,
+      assetKey,
+      assetType: inferF1AssetType(assetKey, settings.f1Mode),
+      name: humanNameFromAssetKey(assetIndex, assetKey),
+      incomeUAH: round2(agg.income),
+      costUAH: round2(agg.cost),
+      resultUAH: round2(agg.income - agg.cost),
+    });
+  }
+
+  const totalIncomeUAH = round2(rows.reduce((s,r)=>s+r.incomeUAH,0));
+  const totalCostUAH   = round2(rows.reduce((s,r)=>s+r.costUAH,0));
+  const totalResultUAH = round2(rows.reduce((s,r)=>s+r.resultUAH,0));
+
+  const carryLossUAH = round2(Math.max(0, settings.carryLossUAH || 0));
+  const netResultUAH = round2(totalResultUAH - carryLossUAH);
+  const netProfitUAH = netResultUAH > 0 ? netResultUAH : 0;
+  const netLossUAH   = netResultUAH < 0 ? round2(-netResultUAH) : 0;
+
+  const pitUAH = round2(netProfitUAH * settings.pitInvestRate);
+  const milUAH = round2(netProfitUAH * settings.milInvestRate);
+
+  const operations = inYear
+    .slice()
+    .sort((a,b)=>a.closeDate.localeCompare(b.closeDate))
+    .map(m => ({
+      closeDate: m.closeDate,
+      assetKey: m.assetKey,
+      qtyAbs: m.qtyAbs,
+      incomeUAH: round2(m.incomeUAH),
+      costUAH: round2(m.expenseUAH),
+      resultUAH: round2(m.pnlUAH),
+    }));
+
+  return {
+    taxYear: settings.taxYear,
+    rows,
+    totals: {
+      totalIncomeUAH, totalCostUAH, totalResultUAH,
+      carryLossUAH,
+      netResultUAH,
+      netProfitUAH,
+      netLossUAH
+    },
+    investTaxes: { pitUAH, milUAH, pitDueUAH: pitUAH, milDueUAH: milUAH },
+    operations
+  };
+}
+
+async function computeDividendsUAH(statement, settings) {
+  const y = String(settings.taxYear) + "-";
+  const div = statement.cashIncomes.filter(ci => {
+    if (!ci.date || !ci.date.startsWith(y)) return false;
+    if (ci.kind === "DIVIDEND") return true;
+    if (settings.treatPILasDividend && ci.kind === "PIL_DIVIDEND") return true;
+    return false;
+  });
+
+  let totalUAH = 0;
+  for (const d of div) {
+    const r = fxRateSync(d.currency, d.date);
+    if (!r) throw new Error(`Немає курсу для ${d.currency} на ${d.date} (дивіденди).`);
+    totalUAH += d.amount * r;
+  }
+  return { items: div, totalUAH };
+}
+
+async function computeWithholdingOnDivUAH(statement, settings) {
+  const y = String(settings.taxYear) + "-";
+  const items = statement.withholdings.filter(w => {
+    if (!w.date || !w.date.startsWith(y)) return false;
+    const d = String(w.description || "").toLowerCase();
+    if (d.includes("dividend")) return true;
+    if (settings.treatPILasDividend && d.includes("payment in lieu")) return true;
+    return false;
+  });
+
+  let totalUAH = 0;
+  for (const w of items) {
+    const r = fxRateSync(w.currency, w.date);
+    if (!r) throw new Error(`Немає курсу для ${w.currency} на ${w.date} (утримання).`);
+    totalUAH += Math.abs(w.amount) * r;
+  }
+  return { items, totalUAH };
+}
+
+/* =========================
+   Declaration numbers (for UI + XLSX)
+========================= */
+function computeDeclarationNumbers(statement, f1, taxSummary, settings) {
+  const investProfit = taxSummary.invest.netProfitUAH;
+  const investPIT    = taxSummary.invest.pitUAH;
+  const investMIL    = taxSummary.invest.milUAH;
+
+  const divIncome     = taxSummary.dividends.dividendsUAH;
+  const divPITgross   = taxSummary.dividends.pitGrossUAH;
+  const divCredit     = taxSummary.dividends.creditUAH;
+  const divMIL        = taxSummary.dividends.milUAH;
+
+  const totalPIT = taxSummary.totals.pitUAH;
+
+  const row108_income = Math.max(0, investProfit);
+  const row1010_income = Math.max(0, divIncome);
+  const row1010_pit_gross = Math.max(0, divPITgross);
+  const row1010_mil = Math.max(0, divMIL);
+
+  const row13 = investPIT + row1010_pit_gross;
+  const row18 = Math.max(0, divCredit);
+  const row201 = totalPIT;
+  const row211 = investMIL + row1010_mil;
+
+  return {
+    row108_income, investPIT, investMIL,
+    row1010_income, row1010_pit_gross, row1010_mil,
+    row13, row18, row201, row211
+  };
+}
+
+/* =========================
+   Render tables
+========================= */
+function renderTable(el, columns, rows) {
+  const thead = "<thead><tr>" + columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join("") + "</tr></thead>";
+  const tbody = "<tbody>" + rows.map(r => {
+    return "<tr>" + columns.map(c => {
+      let v = (typeof c.value === "function") ? c.value(r) : r[c.value];
+      if (c.num && Number.isFinite(v)) v = fmt2(v);
+      let cls = c.num ? "num" : "";
+      if (c.num) {
+        const vv = (typeof c.value === "function") ? c.value(r) : r[c.value];
+        if (Number.isFinite(vv)) {
+          if (vv > 0) cls += " pos";
+          else if (vv < 0) cls += " neg";
+          else cls += " zero";
+        }
+      }
+      return `<td class="${cls}">${escapeHtml(v)}</td>`;
+    }).join("") + "</tr>";
+  }).join("") + "</tbody>";
+  el.innerHTML = thead + tbody;
+}
+function firstN(arr,n){ return arr.slice(0, Math.min(n, arr.length)); }
+
+/* =========================
+   Exports
+========================= */
+async function ensureSheetJS() {
+  if (window.XLSX) return true;
+  return new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+}
+
+function exportCsvF1AndOps(f1) {
+  const f1Rows = [
+    ["№","Код","Найменування","Дохід (грн)","Витрати (грн)","Результат (грн)","assetKey"],
+    ...f1.rows.map(r => [r.n, r.assetType, r.name, fmt2(r.incomeUAH), fmt2(r.costUAH), fmt2(r.resultUAH), r.assetKey])
+  ];
+  downloadBlob(`F1_${f1.taxYear}.csv`, "text/csv;charset=utf-8", toCsv(f1Rows));
+
+  const header = ["Дата закриття","assetKey","К-ть (abs)","Дохід (грн)","Витрати (грн)","Результат (грн)"];
+  const dataRows = f1.operations.map(o => [o.closeDate, o.assetKey, o.qtyAbs, fmt2(o.incomeUAH), fmt2(o.costUAH), fmt2(o.resultUAH)]);
+
+  const MAX_DATA_ROWS_PER_FILE = 900000;
+  if (dataRows.length <= MAX_DATA_ROWS_PER_FILE) {
+    downloadBlob(`Operations_${f1.taxYear}.csv`, "text/csv;charset=utf-8", toCsv([header, ...dataRows]));
+  } else {
+    let part = 1;
+    for (let i=0; i<dataRows.length; i += MAX_DATA_ROWS_PER_FILE) {
+      const slice = dataRows.slice(i, i + MAX_DATA_ROWS_PER_FILE);
+      downloadBlob(`Operations_${f1.taxYear}_part${part}.csv`, "text/csv;charset=utf-8", toCsv([header, ...slice]));
+      part++;
+    }
+  }
+}
+
+function exportPrintableF1(f1) {
+  const rowsHtml = f1.rows.map(r => `
+    <tr>
+      <td>${r.n}</td>
+      <td>${r.assetType}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td class="num">${escapeHtml(fmt2(r.incomeUAH))}</td>
+      <td class="num">${escapeHtml(fmt2(r.costUAH))}</td>
+      <td class="num">${escapeHtml(fmt2(r.resultUAH))}</td>
+    </tr>`).join("");
+
+  const html = `
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8" />
+<title>Ф1 ${f1.taxYear}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; }
+  h1 { font-size: 16px; margin: 0 0 10px 0; }
+  h2 { font-size: 14px; margin: 14px 0 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #000; padding: 4px; vertical-align: top; }
+  .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  @media print { button { display: none; } }
+</style>
+</head><body>
+<button onclick="window.print()">Друк / Зберегти як PDF</button>
+<h1>Додаток Ф1 — розрахунок інвестиційного прибутку за ${f1.taxYear} рік</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>№</th>
+      <th>Вид (код)</th>
+      <th>Найменування та характеристика</th>
+      <th>Дохід (грн)</th>
+      <th>Витрати (грн)</th>
+      <th>Фін. результат (грн)</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${rowsHtml}
+    <tr>
+      <td colspan="3"><b>УСЬОГО</b></td>
+      <td class="num"><b>${escapeHtml(fmt2(f1.totals.totalIncomeUAH))}</b></td>
+      <td class="num"><b>${escapeHtml(fmt2(f1.totals.totalCostUAH))}</b></td>
+      <td class="num"><b>${escapeHtml(fmt2(f1.totals.totalResultUAH))}</b></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Підсумок</h2>
+<p><b>Рядок 2 (перенесений збиток):</b> ${escapeHtml(fmt2(f1.totals.carryLossUAH))} грн</p>
+<p><b>Рядок 3 (загальний фінрезультат):</b> ${escapeHtml(fmt2(f1.totals.netResultUAH))} грн</p>
+<p><b>Рядок 3.1 (прибуток):</b> ${escapeHtml(fmt2(f1.totals.netProfitUAH))} грн</p>
+<p><b>Рядок 3.2 (збиток):</b> ${escapeHtml(fmt2(f1.totals.netLossUAH))} грн</p>
+
+<h2>Розділ II</h2>
+<p><b>ПДФО:</b> ${escapeHtml(fmt2(f1.investTaxes.pitUAH))} грн</p>
+<p><b>Військовий збір:</b> ${escapeHtml(fmt2(f1.investTaxes.milUAH))} грн</p>
+</body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) throw new Error("Блокування pop‑up. Дозвольте відкриття вікон для друку.");
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
+function getDividendItemsForYear(statement, taxYear, treatPILasDividend) {
+  const y = String(taxYear) + "-";
+  return (statement?.cashIncomes || []).filter(ci => {
+    if (!ci?.date || !ci.date.startsWith(y)) return false;
+    if (ci.kind === "DIVIDEND") return true;
+    if (treatPILasDividend && ci.kind === "PIL_DIVIDEND") return true;
+    return false;
+  });
+}
+
+function buildDeclarationHintsAoA(statement, f1, taxSummary, settings) {
+  const year = f1.taxYear;
+
+  const investProfit = taxSummary.invest.netProfitUAH;
+  const investPIT    = taxSummary.invest.pitUAH;
+  const investMIL    = taxSummary.invest.milUAH;
+
+  const divIncome     = taxSummary.dividends.dividendsUAH;         // gross
+  const divPITgross   = taxSummary.dividends.pitGrossUAH;          // gross PIT
+  const divWithheld   = taxSummary.dividends.withholdingDivUAH;    // утримано
+  const divCredit     = taxSummary.dividends.creditUAH;            // залік
+  const divMIL        = taxSummary.dividends.milUAH;
+
+  const totalPIT = taxSummary.totals.pitUAH;
+  const totalMIL = taxSummary.totals.milUAH;
+  const totalAll = taxSummary.totals.totalUAH;
+
+  const treatPIL = settings?.treatPILasDividend ?? true;
+  const divItems = getDividendItemsForYear(statement, year, treatPIL);
+  const divCurrencies = Array.from(new Set(divItems.map(d => d.currency))).sort();
+  const divCurrenciesTxt = divCurrencies.length ? divCurrencies.join(", ") : "—";
+
+  const row108_income = Math.max(0, investProfit);
+
+  const row1010_income = Math.max(0, divIncome);
+  const row1010_pit_gross = Math.max(0, divPITgross);
+  const row1010_mil = Math.max(0, divMIL);
+
+  const expected_row13 = investPIT + row1010_pit_gross;
+  const expected_row18 = Math.max(0, divCredit);
+  const expected_row201 = totalPIT;
+  const expected_row211 = investMIL + row1010_mil;
+
+  return [
+    [`Підказки для заповнення декларації про майновий стан і доходи за ${year} рік`],
+    [`Увага: це довідкові підказки, не податкова консультація. Перевіряйте актуальну форму та інструкції ДПС.`],
+    [],
+    [`Ключові суми (грн)`],
+    ["Інвестприбуток (Ф1, рядок 3.1)", fmt2(row108_income)],
+    ["ПДФО з інвестприбутку (Ф1, розд. II)", fmt2(investPIT)],
+    ["ВЗ з інвестприбутку (Ф1, розд. II)", fmt2(investMIL)],
+    [],
+    ["Іноземні дивіденди (gross)", fmt2(row1010_income)],
+    ["ПДФО на іноземні дивіденди (gross)", fmt2(row1010_pit_gross)],
+    ["Утримано за кордоном (дивіденди)", fmt2(divWithheld)],
+    ["Залік застосовано?", (settings?.useForeignTaxCredit ? "Так" : "Ні")],
+    ["Залік (сума до розд. V, рядок 18)", fmt2(expected_row18)],
+    ["ВЗ на іноземні дивіденди", fmt2(row1010_mil)],
+    [],
+    ["Разом до сплати (за розрахунком)", ""],
+    ["ПДФО всього", fmt2(totalPIT)],
+    ["ВЗ всього", fmt2(totalMIL)],
+    ["Разом", fmt2(totalAll)],
+    [],
+    ["Куди переносити у декларації (орієнтир по XLS‑зразку):", "", ""],
+    ["Розділ II, рядок 10.8, графа 3", fmt2(row108_income), "зразок: 'Деклар 2024'!AK64"],
+    ["Розділ II, рядок 10.8, графа 6", fmt2(investPIT), "зразок: 'Деклар 2024'!BE64"],
+    ["Розділ II, рядок 10.8, графа 7", fmt2(investMIL), "зразок: 'Деклар 2024'!BL64"],
+    [],
+    ["Розділ II, рядок 10.10, графа 3", fmt2(row1010_income), "зразок: 'Деклар 2024'!AK66"],
+    ["Розділ II, рядок 10.10, графа 6 (gross)", fmt2(row1010_pit_gross), "зразок: 'Декlar 2024'!BE66"],
+    ["Розділ II, рядок 10.10, графа 7", fmt2(row1010_mil), "зразок: 'Декlar 2024'!BL66"],
+    [],
+    ["Розділ V, рядок 13", fmt2(expected_row13), "зразок: 'Декlar 2024'!BE84"],
+    ["Розділ V, рядок 18", fmt2(expected_row18), "зразок: 'Декlar 2024'!BE89"],
+    ["Розділ V, рядок 20.1", fmt2(expected_row201), "зразок: 'Декlar 2024'!BE92"],
+    ["Розділ V, рядок 21.1", fmt2(expected_row211), "зразок: 'Декlar 2024'!BE96"],
+    [],
+    ["Примітки:", "", ""],
+    [`• Валюта(и) дивідендів у звіті IB за ${year}: ${divCurrenciesTxt}. Країну джерела доходу вказуйте відповідно до емітентів/документів.`, "", ""],
+    ["• Для іноземних дивідендів: ПДФО у рядку 10.10 — «gross», а залік показуйте окремо у розд. V рядок 18.", "", ""],
+    ["• ВЗ (військовий збір) заліком не зменшується.", "", ""],
+  ];
+}
+
+async function exportXlsx(statement, f1, taxSummary, settings) {
+  const ok = await ensureSheetJS();
+  if (!ok || !window.XLSX) {
+    showToast("Не вдалося завантажити XLSX (можливо, немає інтернету). Використайте CSV або друк.", "error", 5200);
+    return;
+  }
+  const XLSX = window.XLSX;
+  const wb = XLSX.utils.book_new();
+
+  // Summary
+  const sum = [
+    [`Підсумок ${f1.taxYear}`],
+    [],
+    ["ІНВЕСТ‑РЕЗУЛЬТАТ (FIFO, грн)"],
+    ["Дохід", fmt2(taxSummary.invest.incomeUAH)],
+    ["Витрати", fmt2(taxSummary.invest.costUAH)],
+    ["Фінрезультат", fmt2(taxSummary.invest.resultUAH)],
+    ["Перенесений збиток", fmt2(taxSummary.invest.carryLossUAH)],
+    ["Підсумок (ряд.3)", fmt2(taxSummary.invest.netResultUAH)],
+    ["Прибуток (ряд.3.1)", fmt2(taxSummary.invest.netProfitUAH)],
+    ["ПДФО (інвест)", fmt2(taxSummary.invest.pitUAH)],
+    ["ВЗ (інвест)", fmt2(taxSummary.invest.milUAH)],
+    ["К-ть FIFO‑операцій (за рік)", String(f1.operations.length)],
+    [],
+    ["ДИВІДЕНДИ (грн)"],
+    ["Дивіденди", fmt2(taxSummary.dividends.dividendsUAH)],
+    ["Утримано (div)", fmt2(taxSummary.dividends.withholdingDivUAH)],
+    ["ПДФО (gross)", fmt2(taxSummary.dividends.pitGrossUAH)],
+    ["Залік", fmt2(taxSummary.dividends.creditUAH)],
+    ["ПДФО до сплати", fmt2(taxSummary.dividends.pitDueUAH)],
+    ["ВЗ до сплати", fmt2(taxSummary.dividends.milUAH)],
+    [],
+    ["РАЗОМ"],
+    ["ПДФО всього", fmt2(taxSummary.totals.pitUAH)],
+    ["ВЗ всього", fmt2(taxSummary.totals.milUAH)],
+    ["Всього до сплати", fmt2(taxSummary.totals.totalUAH)],
+  ];
+  const wsSum = XLSX.utils.aoa_to_sheet(sum);
+  wsSum["!cols"] = [{wch:30},{wch:28}];
+  XLSX.utils.book_append_sheet(wb, wsSum, "Summary");
+
+  // Declaration
+  const declAoA = buildDeclarationHintsAoA(statement, f1, taxSummary, settings);
+  const wsDecl = XLSX.utils.aoa_to_sheet(declAoA);
+  wsDecl["!cols"] = [{wch:70},{wch:22},{wch:45}];
+  XLSX.utils.book_append_sheet(wb, wsDecl, "Декларація");
+
+  // F1
+  const f1Head = [
+    [`Додаток Ф1 за ${f1.taxYear} рік`],
+    [],
+    ["№","Вид (код)","Найменування та характеристика","Дохід (грн)","Витрати (грн)","Фін. результат (грн)","assetKey"]
+  ];
+  const f1Rows = f1.rows.map(r => [r.n, r.assetType, r.name, fmt2(r.incomeUAH), fmt2(r.costUAH), fmt2(r.resultUAH), r.assetKey]);
+  const f1Totals = [
+    [],
+    ["","","УСЬОГО", fmt2(f1.totals.totalIncomeUAH), fmt2(f1.totals.totalCostUAH), fmt2(f1.totals.totalResultUAH)],
+    [],
+    ["Рядок 2", fmt2(f1.totals.carryLossUAH)],
+    ["Рядок 3", fmt2(f1.totals.netResultUAH)],
+    ["Рядок 3.1", fmt2(f1.totals.netProfitUAH)],
+    ["Рядок 3.2", fmt2(f1.totals.netLossUAH)],
+    [],
+    ["ПДФО", fmt2(f1.investTaxes.pitUAH)],
+    ["Військовий збір", fmt2(f1.investTaxes.milUAH)],
+  ];
+  const wsF1 = XLSX.utils.aoa_to_sheet([...f1Head, ...f1Rows, ...f1Totals]);
+  wsF1["!cols"] = [{wch:6},{wch:10},{wch:65},{wch:18},{wch:18},{wch:18},{wch:38}];
+  XLSX.utils.book_append_sheet(wb, wsF1, "F1");
+
+  // Ops — split across sheets (no truncation)
+  const EXCEL_MAX_ROWS = 1048576;
+  const HEADER_ROWS = 3;
+  const MAX_DATA_PER_SHEET = EXCEL_MAX_ROWS - HEADER_ROWS;
+
+  const opsData = f1.operations;
+  const parts = Math.max(1, Math.ceil(opsData.length / MAX_DATA_PER_SHEET));
+
+  for (let p=0; p<parts; p++) {
+    const from = p * MAX_DATA_PER_SHEET;
+    const to = Math.min(opsData.length, (p+1) * MAX_DATA_PER_SHEET);
+    const slice = opsData.slice(from, to);
+
+    const opsAoA = [
+      [`Операції (FIFO) ${f1.taxYear} — частина ${p+1}/${parts} (рядки ${from+1}-${to})`],
+      [],
+      ["Дата закриття","assetKey","К-ть (abs)","Дохід (грн)","Витрати (грн)","Результат (грн)"],
+      ...slice.map(o => [o.closeDate, o.assetKey, o.qtyAbs, fmt2(o.incomeUAH), fmt2(o.costUAH), fmt2(o.resultUAH)])
+    ];
+    const wsOps = XLSX.utils.aoa_to_sheet(opsAoA);
+    wsOps["!cols"] = [{wch:12},{wch:42},{wch:12},{wch:18},{wch:18},{wch:18}];
+
+    const sheetName = (parts === 1) ? "Ops" : `Ops_${p+1}`;
+    XLSX.utils.book_append_sheet(wb, wsOps, sheetName);
+  }
+
+  XLSX.writeFile(wb, `IB_Taxes_${f1.taxYear}_F1.xlsx`);
+}
+
+/* =========================
+   Open positions: top losers
+========================= */
+async function computeTopLosers(statement, asOfDate, topN, netProfitUAH, pitRate, milRate) {
+  const scored = [];
+  for (const p of statement.positions) {
+    const r = fxRateSync(p.asset.currency, asOfDate);
+    if (!r) continue;
+    const uah = p.unrealizedPL * r;
+    scored.push({ p, unrealizedUAH: uah });
+  }
+  scored.sort((a,b)=>a.unrealizedUAH - b.unrealizedUAH);
+  const top = scored.slice(0, Math.max(1, topN|0));
+
+  return top.map(x => {
+    const lossUAH = x.unrealizedUAH < 0 ? -x.unrealizedUAH : 0;
+    const reducible = Math.min(lossUAH, Math.max(0, netProfitUAH));
+    const estTaxSaved = reducible * (pitRate + milRate);
+    return { ...x, lossUAH, reducible, estTaxSaved };
+  });
+}
+
+/* =========================
+   App state
+========================= */
+const state = {
+  pendingCsvFile: null,
+  pendingFxFiles: [],
+  statement: null,
+  assetIndex: null,
+  fifo: null,
+  f1: null,
+  taxSummary: null,
+  fxNeeds: null,
+};
+
+const opsView = {
+  page: 0,
+  pageSize: 300,
+  search: "",
+};
+
+/* =========================
+   Settings + localStorage
+========================= */
+const LS_KEY = "ib_ua_tax_v4_settings";
+
+function readSettings() {
+  return {
+    taxYear: Number($("#taxYear").value),
+    pitInvestRate: Number($("#pitInvestRate").value),
+    milInvestRate: Number($("#milInvestRate").value),
+    pitDivRate: Number($("#pitDivRate").value),
+    milDivRate: Number($("#milDivRate").value),
+    carryLossUAH: Number($("#carryLossUAH").value || 0),
+    useForeignTaxCredit: $("#useForeignTaxCredit").checked,
+    treatPILasDividend: $("#treatPILasDividend").checked,
+    f1Mode: buildF1ModeFromUI(),
+  };
+}
+function saveSettings() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(readSettings())); } catch {}
+}
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.taxYear) $("#taxYear").value = String(s.taxYear);
+    if (Number.isFinite(s.pitInvestRate)) $("#pitInvestRate").value = s.pitInvestRate;
+    if (Number.isFinite(s.milInvestRate)) $("#milInvestRate").value = s.milInvestRate;
+    if (Number.isFinite(s.pitDivRate)) $("#pitDivRate").value = s.pitDivRate;
+    if (Number.isFinite(s.milDivRate)) $("#milDivRate").value = s.milDivRate;
+    if (Number.isFinite(s.carryLossUAH)) $("#carryLossUAH").value = s.carryLossUAH;
+    $("#useForeignTaxCredit").checked = !!s.useForeignTaxCredit;
+    $("#treatPILasDividend").checked = (s.treatPILasDividend !== false);
+
+    if (s.f1Mode?.mode) $("#f1AssetTypeMode").value = s.f1Mode.mode;
+    if (s.f1Mode?.mode === "MANUAL") {
+      $("#manualMapWrap").style.display = "block";
+      $("#f1ManualMap").value = JSON.stringify(s.f1Mode.map || {}, null, 2);
+    }
+  } catch {}
+}
+
+/* =========================
+   Wizard
+========================= */
+const wizard = { step: 1 };
+
+
+function getDoneCount(){
+  return (isStep1Done()?1:0) + (isStep2Done()?1:0) + (isStep3Done()?1:0);
+}
+function updateTopProgress(){
+  const bar = $("#topProgressBar");
+  if (!bar) return;
+  const pct = Math.round((getDoneCount() / 3) * 100);
+  bar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+}
+
+
+function stepEl(n){ return document.querySelector(`section.wStep[data-step="${n}"]`); }
+function stepBtnEl(n){ return document.querySelector(`.stepBtn[data-step="${n}"]`); }
+
+function isStep1Done(){ return !!state.statement; }
+function isStep2Done(){
+  if (!state.statement) return false;
+  const s = readSettings();
+  const rep = getFxCoverageReport(state.statement, s.taxYear);
+  return rep.ready;
+}
+function isStep3Done(){ return !!state.taxSummary && !!state.f1; }
+
+function canEnterStep(n){
+  if (n === 1) return true;
+  if (n === 2) return isStep1Done();
+  if (n === 3) return isStep1Done() && isStep2Done();
+  if (n === 4) return isStep1Done() && isStep2Done() && isStep3Done();
+  return false;
+}
+
+function setStep(n) {
+  if (!canEnterStep(n)) return;
+
+  wizard.step = n;
+  document.querySelectorAll(".wStep").forEach(s => s.classList.remove("active"));
+  stepEl(n).classList.add("active");
+
+  // stepper states
+  for (let i=1;i<=4;i++) {
+    const b = stepBtnEl(i);
+    b.classList.remove("active","done","locked");
+    if (i === n) b.classList.add("active");
+    const done = (i===1 && isStep1Done()) || (i===2 && isStep2Done()) || (i===3 && isStep3Done()) || (i===4 && false);
+    if (done) b.classList.add("done");
+    if (!canEnterStep(i)) b.classList.add("locked");
+  }
+
+  updateNav();
+  // focus heading
+  const h = stepEl(n).querySelector("h2");
+  if (h) h.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function updateNav(){
+  $("#btnBack").disabled = (wizard.step === 1);
+  $("#btnNext").disabled = (wizard.step === 4) || !canEnterStep(wizard.step + 1);
+
+  let msg = "";
+  if (wizard.step === 1) {
+    msg = isStep1Done() ? "✅ Звіт розпізнано. Натисніть «Далі», щоб завантажити курси НБУ." : "Завантажте CSV та натисніть «Розпізнати звіт».";
+  } else if (wizard.step === 2) {
+    msg = isStep2Done() ? "✅ Курси готові. Натисніть «Далі», щоб перейти до розрахунку." : "Додайте курси НБУ (онлайн або через JSON), щоб продовжити.";
+  } else if (wizard.step === 3) {
+    msg = isStep3Done() ? "✅ Розрахунок готовий. Натисніть «Далі», щоб подивитися збиткові позиції." : "Натисніть «Розрахувати податки» після перевірки налаштувань.";
+  } else {
+    msg = "Крок 4: аналіз відкритих позицій.";
+  }
+  $("#navInfo").textContent = msg;
+
+  // unlock stepper buttons visually
+  for (let i=1;i<=4;i++){
+    const b = stepBtnEl(i);
+    b.classList.toggle("locked", !canEnterStep(i));
+  }
+
+  updateTopProgress();
+}
+
+document.querySelectorAll(".stepBtn").forEach(b => {
+  b.addEventListener("click", () => {
+    const n = Number(b.dataset.step);
+    if (canEnterStep(n)) setStep(n);
+  });
+});
+
+$("#btnBack").addEventListener("click", () => {
+  if (wizard.step > 1) setStep(wizard.step - 1);
+});
+$("#btnNext").addEventListener("click", () => {
+  if (wizard.step < 4 && canEnterStep(wizard.step + 1)) setStep(wizard.step + 1);
+});
+
+/* =========================
+   UI: drop zones
+========================= */
+function setupDropZone(zoneEl, onFiles) {
+  zoneEl.addEventListener("dragover", (e) => { e.preventDefault(); zoneEl.classList.add("drag"); });
+  zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("drag"));
+  zoneEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    zoneEl.classList.remove("drag");
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length) onFiles(files);
+  });
+}
+
+setupDropZone($("#dropCsv"), (files) => {
+  const f = files.find(x => (x.name||"").toLowerCase().endsWith(".csv")) || files[0];
+  if (!f) return;
+  state.pendingCsvFile = f;
+  $("#fileCsv").value = "";
+  $("#csvPill").textContent = `CSV: ${f.name}`;
+  $("#csvPill").className = "pill good";
+  $("#btnParse").disabled = false;
+  $("#btnReset").disabled = false;
+  setStatus($("#csvInfo"), `Файл обрано: ${f.name}\nНатисніть «Розпізнати звіт».`);
+  setStatus($("#statusUpload"), "Статус: готово до розпізнавання.", "warn");
+  updateNav();
+});
+
+setupDropZone($("#dropFx"), (files) => {
+  const jsons = files.filter(f => (f.name||"").toLowerCase().endsWith(".json"));
+  state.pendingFxFiles = jsons.length ? jsons : files;
+  $("#fxFiles").value = "";
+  $("#fxFilesPill").textContent = `JSON: ${state.pendingFxFiles.length} файл(и)`;
+  $("#fxFilesPill").className = "pill good";
+  setStatus($("#fxStatus"), `Обрано ${state.pendingFxFiles.length} JSON‑файл(и). Натисніть «Підвантаж JSON‑файли».`, "warn");
+});
+
+/* =========================
+   Step 1: CSV selection + parse
+========================= */
+$("#btnPickCsv").addEventListener("click", () => $("#fileCsv").click());
+$("#fileCsv").addEventListener("change", () => {
+  const f = $("#fileCsv").files?.[0];
+  if (!f) return;
+  state.pendingCsvFile = f;
+  $("#csvPill").textContent = `CSV: ${f.name}`;
+  $("#csvPill").className = "pill good";
+  $("#btnParse").disabled = false;
+  $("#btnReset").disabled = false;
+  setStatus($("#csvInfo"), `Файл обрано: ${f.name}\nНатисніть «Розпізнати звіт».`);
+  setStatus($("#statusUpload"), "Статус: готово до розпізнавання.", "warn");
+  updateNav();
+});
+
+function renderPreview(st) {
+  let minD=null, maxD=null;
+  const curSet = new Set();
+  for (const t of st.trades) { minD = minIso(minD, t.tradeDate); maxD = maxIso(maxD, t.tradeDate); curSet.add(t.asset.currency); }
+  for (const ci of st.cashIncomes) { if (ci.date) { minD = minIso(minD, ci.date); maxD = maxIso(maxD, ci.date); curSet.add(ci.currency); } }
+  for (const w of st.withholdings) { if (w.date) { minD = minIso(minD, w.date); maxD = maxIso(maxD, w.date); curSet.add(w.currency); } }
+  for (const p of st.positions) { curSet.add(p.asset.currency); }
+
+  $("#kpiDates").textContent = (minD && maxD) ? `${minD} → ${maxD}` : "—";
+  $("#kpiCurrencies").textContent = Array.from(curSet).sort().join(", ") || "—";
+  $("#kpiTrades").textContent = String(st.trades.length);
+  $("#kpiOther").textContent = `${st.cashIncomes.length} / ${st.withholdings.length} / ${st.positions.length}`;
+
+  if (st.warnings && st.warnings.length) {
+    const lines = st.warnings.slice(0, 12).map(w => `• [${w.code}] ${w.message}`);
+    if (st.warnings.length > 12) lines.push(`… і ще ${st.warnings.length - 12}`);
+    $("#warningsBox").classList.remove("hidden");
+    setStatus($("#warningsBox"), "Попередження:\n" + lines.join("\n"), "warn");
+  } else {
+    $("#warningsBox").classList.add("hidden");
+  }
+
+  renderTable($("#tblTrades"), [
+    { label:"Дата", value:(r)=>r.tradeDate },
+    { label:"Символ", value:(r)=>r.asset.symbolRaw },
+    { label:"assetKey", value:(r)=>r.asset.assetKey },
+    { label:"К-ть", value:(r)=>r.quantity, num:true },
+    { label:"netCash", value:(r)=>r.netCash, num:true },
+    { label:"Валюта", value:(r)=>r.asset.currency },
+  ], firstN(st.trades, 200));
+
+  renderTable($("#tblDiv"), [
+    { label:"Дата", value:(r)=>r.date },
+    { label:"Валюта", value:(r)=>r.currency },
+    { label:"Тип", value:(r)=>r.kind },
+    { label:"Сума", value:(r)=>r.amount, num:true },
+    { label:"Опис", value:(r)=>r.description },
+  ], firstN(st.cashIncomes, 200));
+
+  renderTable($("#tblWh"), [
+    { label:"Дата", value:(r)=>r.date },
+    { label:"Валюта", value:(r)=>r.currency },
+    { label:"Сума", value:(r)=>r.amount, num:true },
+    { label:"Опис", value:(r)=>r.description },
+  ], firstN(st.withholdings, 200));
+
+  renderTable($("#tblPos"), [
+    { label:"Актив", value:(r)=>r.asset.symbolRaw },
+    { label:"assetKey", value:(r)=>r.asset.assetKey },
+    { label:"К-ть", value:(r)=>r.quantity, num:true },
+    { label:"Валюта", value:(r)=>r.asset.currency },
+    { label:"Вартість", value:(r)=>r.value, num:true },
+    { label:"Нереаліз. P/L", value:(r)=>r.unrealizedPL, num:true },
+  ], firstN(st.positions, 200));
+}
+
+function resetAll() {
+  state.pendingCsvFile = null;
+  state.pendingFxFiles = [];
+  state.statement = null;
+  state.assetIndex = null;
+  state.fifo = null;
+  state.f1 = null;
+  state.taxSummary = null;
+  state.fxNeeds = null;
+  fxClear();
+
+  $("#csvPill").textContent = "CSV не обрано";
+  $("#csvPill").className = "pill";
+  $("#fxFilesPill").textContent = "JSON не обрано";
+  $("#fxFilesPill").className = "pill";
+
+  $("#fileCsv").value = "";
+  $("#fxFiles").value = "";
+
+  $("#btnParse").disabled = true;
+  $("#btnReset").disabled = true;
+  $("#btnDownloadParsed").disabled = true;
+
+  $("#btnDownloadFx").disabled = true;
+  $("#btnClearFx").disabled = true;
+  $("#btnShowFxLinks").disabled = true;
+  $("#btnDownloadFxLinksFile").disabled = true;
+
+  $("#btnCalc").disabled = true;
+  $("#btnDownloadDebug").disabled = true;
+  $("#btnExportXlsx").disabled = true;
+  $("#btnExportCsv").disabled = true;
+  $("#btnPrintF1").disabled = true;
+
+  $("#taxCards").style.display = "none";
+  $("#exportBtns").style.display = "none";
+  $("#declDetails").style.display = "none";
+  $("#f1Details").style.display = "none";
+  $("#opsDetails").style.display = "none";
+
+  $("#fxLinksBox").classList.add("hidden");
+  $("#fxLinksBox").innerHTML = "";
+  $("#fxMissingBox").classList.add("hidden");
+  $("#fileSchemeBanner").classList.add("hidden");
+
+  $("#kpiDates").textContent = "—";
+  $("#kpiCurrencies").textContent = "—";
+  $("#kpiTrades").textContent = "—";
+  $("#kpiOther").textContent = "—";
+  $("#warningsBox").classList.add("hidden");
+
+  $("#tblTrades").innerHTML = "";
+  $("#tblDiv").innerHTML = "";
+  $("#tblWh").innerHTML = "";
+  $("#tblPos").innerHTML = "";
+  $("#tblF1").innerHTML = "";
+  $("#tblOps").innerHTML = "";
+  $("#declTable").innerHTML = "";
+
+  setStatus($("#csvInfo"), "Очікую CSV…");
+  setStatus($("#statusUpload"), "Статус: очікую файл.");
+  setStatus($("#fxNeedSummary"), "Спочатку розпізнайте CSV (крок 1).");
+  $("#fxProgress").style.width = "0%";
+  $("#fxCoverageText").textContent = "Покриття: —";
+  setStatus($("#fxStatus"), "Курси ще не завантажені.");
+  setStatus($("#statusCalc"), "Спочатку завершіть кроки 1–2.");
+  setStatus($("#losersBox"), "Поки що немає даних.");
+  $("#btnShowLosers").disabled = true;
+  $("#btnCopyLosers").disabled = true;
+
+  wizard.step = 1;
+  setStep(1);
+  updateNav();
+}
+
+$("#btnReset").addEventListener("click", resetAll);
+
+$("#btnParse").addEventListener("click", async () => {
+  try {
+    const f = state.pendingCsvFile;
+    if (!f) {
+      setStatus($("#csvInfo"), "CSV не обрано.", "warn");
+      return;
+    }
+    $("#btnParse").disabled = true;
+
+    setStatus($("#statusUpload"), "Читаю файл…");
+    const text = await f.text();
+
+    setStatus($("#statusUpload"), "Обробляю CSV…");
+    const rows = parseCSV(text);
+
+    setStatus($("#statusUpload"), "Розпізнаю секції…");
+    const st = parseFlexReport(rows, f.name);
+
+    state.statement = st;
+    state.assetIndex = buildAssetIndex(st);
+
+    renderPreview(st);
+
+    $("#btnDownloadParsed").disabled = false;
+
+    setStatus($("#csvInfo"),
+      `✅ Звіт розпізнано\n`+
+      `Trades: ${st.trades.length}\n`+
+      `Dividends: ${st.cashIncomes.length}\n`+
+      `Withholding: ${st.withholdings.length}\n`+
+      `Open Positions: ${st.positions.length}\n\n`+
+      `Тепер перейдіть до кроку 2 (курси НБУ).`,
+      "good"
+    );
+
+    setStatus($("#statusUpload"), "Статус: готово ✅", "good");
+
+    // prefill asOfDate
+    const asOf = st.meta.asOfDate || st.meta.periodEnd;
+    if (asOf) $("#asOfDate").value = asOf;
+
+    updateStep2FxUi();
+    updateCalcReadiness();
+
+    // auto unlock and go step 2
+    if (canEnterStep(2)) setStep(2);
+  } catch (e) {
+    console.error(e);
+    setStatus($("#statusUpload"), "Помилка розпізнавання:\n" + (e?.message || String(e)), "bad");
+  } finally {
+    $("#btnParse").disabled = false;
+    updateNav();
+  }
+});
+
+$("#btnDownloadParsed").addEventListener("click", () => {
+  if (!state.statement) return;
+  downloadBlob(`statement_${state.statement.meta.fileName}.json`, "application/json;charset=utf-8", JSON.stringify(state.statement, null, 2));
+});
+
+/* =========================
+   Step 2: FX UI + actions
+========================= */
+function updateFileSchemeBanner() {
+  try {
+    const isFile = (location.protocol === "file:");
+    if (isFile) {
+      $("#fileSchemeBanner").classList.remove("hidden");
+      setStatus($("#fileSchemeBanner"),
+        "⚠️ Ви відкрили сторінку як file:// (локально).\n" +
+        "Автозавантаження курсів НБУ може бути заблоковано браузером.\n\n" +
+        "Рішення:\n" +
+        "1) Натисніть «Показати посилання (fallback)» → збережіть JSON → «Підвантаж JSON‑файли»\n" +
+        "або\n" +
+        "2) Відкрийте через локальний сервер:\n" +
+        "   python -m http.server 8000\n" +
+        "   http://localhost:8000/ib_ua_tax_v4.html",
+        "warn"
+      );
+    } else {
+      $("#fileSchemeBanner").classList.add("hidden");
+    }
+  } catch {}
+}
+
+function updateStep2FxUi() {
+  if (!state.statement) {
+    setStatus($("#fxNeedSummary"), "Спочатку розпізнайте CSV (крок 1).", "warn");
+    $("#btnDownloadFx").disabled = true;
+    $("#btnShowFxLinks").disabled = true;
+    $("#btnDownloadFxLinksFile").disabled = true;
+    $("#btnClearFx").disabled = fxCurrenciesLoaded().length === 0;
+    return;
+  }
+
+  const settings = readSettings();
+  const rep = getFxCoverageReport(state.statement, settings.taxYear);
+  state.fxNeeds = rep.needs;
+
+  const needs = rep.needs;
+  const needText = needs.currencies.length ? needs.currencies.join(", ") : "—";
+  const rangeText = `${needs.startIso} → ${needs.endIso}`;
+
+  setStatus($("#fxNeedSummary"),
+    `Валюти: ${needText}\nДіапазон: ${rangeText}`,
+    needs.currencies.length ? (rep.ready ? "good" : "warn") : "good"
+  );
+
+  // progress
+  $("#fxProgress").style.width = `${Math.max(0, Math.min(100, rep.pct))}%`;
+  $("#fxCoverageText").textContent = needs.currencies.length
+    ? `Покриття валют: ${rep.pct}% (це індикатор; повнота перевіряється по датах)`
+    : "Покриття: 100%";
+
+  // missing examples
+  if (!rep.ready) {
+    $("#fxMissingBox").classList.remove("hidden");
+    setStatus($("#fxMissingBox"), rep.missingText, "warn");
+  } else {
+    $("#fxMissingBox").classList.add("hidden");
+  }
+
+  const loaded = fxCurrenciesLoaded();
+  setStatus($("#fxStatus"),
+    `Завантажено валют: ${loaded.join(", ") || "—"}\nДжерело: ${fxStore.meta.provider || "—"}`,
+    rep.ready ? "good" : "warn"
+  );
+
+  $("#btnDownloadFx").disabled = (needs.currencies.length === 0);
+  $("#btnShowFxLinks").disabled = (needs.currencies.length === 0);
+  $("#btnDownloadFxLinksFile").disabled = (needs.currencies.length === 0);
+  $("#btnClearFx").disabled = (loaded.length === 0);
+
+  updateCalcReadiness();
+  updateNav();
+}
+
+$("#btnPickFx").addEventListener("click", () => $("#fxFiles").click());
+$("#fxFiles").addEventListener("change", () => {
+  const files = Array.from($("#fxFiles").files || []);
+  state.pendingFxFiles = files;
+  if (!files.length) return;
+  $("#fxFilesPill").textContent = `JSON: ${files.length} файл(и)`;
+  $("#fxFilesPill").className = "pill good";
+  setStatus($("#fxStatus"), `Обрано ${files.length} JSON‑файл(и). Натисніть «Підвантаж JSON‑файли».`, "warn");
+});
+
+$("#btnLoadFxFiles").addEventListener("click", async () => {
+  try {
+    const files = state.pendingFxFiles;
+    if (!files || !files.length) {
+      setStatus($("#fxStatus"), "Оберіть JSON‑файли курсів або перетягніть їх сюди.", "warn");
+      return;
+    }
+    setStatus($("#fxStatus"), "Завантажую JSON‑файли курсів…");
+    await loadFxFromFiles(files, (msg)=>setStatus($("#fxStatus"), msg));
+    fxStore.meta.provider = fxStore.meta.provider || "NBU_FILES";
+    fxStore.meta.currencies = fxCurrenciesLoaded();
+
+    setStatus($("#fxStatus"), $("#fxStatus").textContent + "\n\nКурси завантажено ✅", "good");
+    updateStep2FxUi();
+  } catch (e) {
+    console.error(e);
+    setStatus($("#fxStatus"), "Помилка завантаження курсів:\n" + (e?.message || String(e)), "bad");
+  }
+});
+
+$("#btnDownloadFx").addEventListener("click", async () => {
+  if (!state.statement) return;
+  const needs = state.fxNeeds || computeFxNeeds(state.statement, readSettings().taxYear);
+
+  try {
+    setStatus($("#fxStatus"), "Готую завантаження…");
+    const bundle = await downloadNbuFxBundleOnline(needs, (msg)=>setStatus($("#fxStatus"), msg));
+    loadFxFromBundle(bundle);
+    fxStore.meta.provider = "NBU_ONLINE";
+    fxStore.meta.range = { start: needs.startIso, end: needs.endIso };
+    fxStore.meta.currencies = fxCurrenciesLoaded();
+    fxStore.meta.loadedAt = new Date().toISOString();
+
+    const fileName = `nbu_fx_${needs.startIso}_${needs.endIso}.json`;
+    downloadBlob(fileName, "application/json;charset=utf-8", JSON.stringify(bundle, null, 2));
+
+    setStatus($("#fxStatus"), `✅ Курси застосовано. Файл збережено: ${fileName}`, "good");
+    updateStep2FxUi();
+  } catch (e) {
+    console.error(e);
+    setStatus($("#fxStatus"), (e?.message || String(e)), "bad");
+    // show fallback links
+    $("#fxLinksBox").classList.remove("hidden");
+    $("#fxLinksBox").innerHTML = buildFxLinksHtml(needs);
+  }
+});
+
+$("#btnShowFxLinks").addEventListener("click", () => {
+  if (!state.statement) return;
+  const needs = state.fxNeeds || computeFxNeeds(state.statement, readSettings().taxYear);
+  $("#fxLinksBox").classList.remove("hidden");
+  $("#fxLinksBox").innerHTML = buildFxLinksHtml(needs);
+});
+
+$("#btnDownloadFxLinksFile").addEventListener("click", () => {
+  if (!state.statement) return;
+  const needs = state.fxNeeds || computeFxNeeds(state.statement, readSettings().taxYear);
+  downloadFxLinksFile(needs);
+});
+
+$("#btnClearFx").addEventListener("click", () => {
+  fxClear();
+  updateStep2FxUi();
+  setStatus($("#fxStatus"), "Курси очищено.", "warn");
+});
+
+/* =========================
+   Step 3: calc readiness + render
+========================= */
+function updateCalcReadiness() {
+  const btn = $("#btnCalc");
+  if (!state.statement) {
+    btn.disabled = true;
+    setStatus($("#statusCalc"), "Спочатку розпізнайте CSV (крок 1).", "warn");
+    return;
+  }
+  const rep = getFxCoverageReport(state.statement, readSettings().taxYear);
+  const can = rep.ready;
+  btn.disabled = !can;
+
+  if (!can) {
+    setStatus($("#statusCalc"),
+      "Не вистачає курсів НБУ для розрахунку.\n" +
+      "Перейдіть у крок 2 та завантажте курси (онлайн або через JSON).",
+      "warn"
+    );
+  } else {
+    setStatus($("#statusCalc"), "Готово до розрахунку ✅ Натисніть «Розрахувати податки».", "good");
+  }
+}
+
+function markResultsStale() {
+  if (!state.taxSummary && !state.f1) return;
+  state.fifo = null;
+  state.f1 = null;
+  state.taxSummary = null;
+
+  $("#taxCards").style.display = "none";
+  $("#exportBtns").style.display = "none";
+  $("#declDetails").style.display = "none";
+  $("#f1Details").style.display = "none";
+  $("#opsDetails").style.display = "none";
+
+  $("#btnExportXlsx").disabled = true;
+  $("#btnExportCsv").disabled = true;
+  $("#btnPrintF1").disabled = true;
+  $("#btnDownloadDebug").disabled = true;
+  $("#btnShowLosers").disabled = true;
+  $("#btnCopyLosers").disabled = true;
+
+  setStatus($("#statusCalc"), "Налаштування змінено. Потрібно перерахувати.", "warn");
+  updateNav();
+}
+
+function renderSummaryCards(taxSummary) {
+  $("#taxCards").style.display = "grid";
+
+  $("#cardInvestProfit").textContent = fmt2(taxSummary.invest.netProfitUAH) + " грн";
+  $("#cardInvestSub").textContent =
+    `ПДФО: ${fmt2(taxSummary.invest.pitUAH)} • ВЗ: ${fmt2(taxSummary.invest.milUAH)}`;
+
+  $("#cardDivIncome").textContent = fmt2(taxSummary.dividends.dividendsUAH) + " грн";
+  $("#cardDivSub").textContent =
+    `ПДФО (gross): ${fmt2(taxSummary.dividends.pitGrossUAH)} • Залік: ${fmt2(taxSummary.dividends.creditUAH)} • ПДФО до сплати: ${fmt2(taxSummary.dividends.pitDueUAH)} • ВЗ: ${fmt2(taxSummary.dividends.milUAH)}`;
+
+  $("#cardTotal").textContent = fmt2(taxSummary.totals.totalUAH) + " грн";
+  $("#cardTotalSub").textContent = `ПДФО: ${fmt2(taxSummary.totals.pitUAH)} • ВЗ: ${fmt2(taxSummary.totals.milUAH)}`;
+}
+
+function renderDeclarationTable(statement, f1, taxSummary, settings) {
+  const d = computeDeclarationNumbers(statement, f1, taxSummary, settings);
+
+  const rows = [
+    { where:"Розд. II, рядок 10.8, гр.3 (дохід)", val:d.row108_income, ref:"'Деклар 2024'!AK64" },
+    { where:"Розд. II, рядок 10.8, гр.6 (ПДФО)", val:d.investPIT, ref:"'Деклар 2024'!BE64" },
+    { where:"Розд. II, рядок 10.8, гр.7 (ВЗ)", val:d.investMIL, ref:"'Декlar 2024'!BL64" },
+
+    { where:"Розд. II, рядок 10.10, гр.3 (дохід)", val:d.row1010_income, ref:"'Декlar 2024'!AK66" },
+    { where:"Розд. II, рядок 10.10, гр.6 (ПДФО gross)", val:d.row1010_pit_gross, ref:"'Декlar 2024'!BE66" },
+    { where:"Розд. II, рядок 10.10, гр.7 (ВЗ)", val:d.row1010_mil, ref:"'Декlar 2024'!BL66" },
+
+    { where:"Розд. V, рядок 13 (ПДФО зоб.)", val:d.row13, ref:"'Декlar 2024'!BE84" },
+    { where:"Розд. V, рядок 18 (залік)", val:d.row18, ref:"'Декlar 2024'!BE89" },
+    { where:"Розд. V, рядок 20.1 (ПДФО до сплати)", val:d.row201, ref:"'Декlar 2024'!BE92" },
+    { where:"Розд. V, рядок 21.1 (ВЗ до сплати)", val:d.row211, ref:"'Декlar 2024'!BE96" },
+  ];
+
+  const columns = [
+    { label:"Куди переносити", value:(r)=>r.where },
+    { label:"Сума (грн)", value:(r)=>r.val, num:true },
+    { label:"Комірка у зразку", value:(r)=>r.ref },
+    { label:"", value:(r)=>"__copy__" },
+  ];
+
+  // render with copy buttons
+  const thead = "<thead><tr>" + columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join("") + "</tr></thead>";
+  const tbody = "<tbody>" + rows.map((r, idx) => {
+    const val = fmt2(r.val);
+    return `<tr>
+      <td>${escapeHtml(r.where)}</td>
+      <td class="num">${escapeHtml(val)}</td>
+      <td>${escapeHtml(r.ref)}</td>
+      <td><button class="copyBtn" type="button" data-copy="${escapeHtml(val)}">Копіювати</button></td>
+    </tr>`;
+  }).join("") + "</tbody>";
+  $("#declTable").innerHTML = thead + tbody;
+
+  $("#declTable").querySelectorAll("button[data-copy]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const t = btn.getAttribute("data-copy") || "";
+      const ok = await copyText(t);
+      showToast(ok ? "Скопійовано ✅" : "Не вдалося скопіювати", ok ? "success" : "error");
+      btn.textContent = ok ? "Скопійовано" : "Не вдалося";
+      setTimeout(()=>btn.textContent="Копіювати", 1100);
+    });
+  });
+
+  $("#declDetails").style.display = "block";
+}
+
+function renderF1Table(f1) {
+  const q = String($("#f1Search").value || "").trim().toLowerCase();
+  const rows = q
+    ? f1.rows.filter(r => (r.name||"").toLowerCase().includes(q) || (r.assetKey||"").toLowerCase().includes(q))
+    : f1.rows.slice();
+
+  setStatus($("#f1Info"), `Показано: ${rows.length} з ${f1.rows.length}`);
+
+  renderTable($("#tblF1"), [
+    { label:"№", value:(r)=>r.n },
+    { label:"Код", value:(r)=>r.assetType },
+    { label:"Найменування", value:(r)=>r.name },
+    { label:"Дохід", value:(r)=>r.incomeUAH, num:true },
+    { label:"Витрати", value:(r)=>r.costUAH, num:true },
+    { label:"Результат", value:(r)=>r.resultUAH, num:true },
+    { label:"assetKey", value:(r)=>r.assetKey },
+  ], rows.slice().sort((a,b)=>a.name.localeCompare(b.name)));
+
+  $("#f1Details").style.display = "block";
+}
+
+function getOpsFiltered(f1) {
+  const q = String($("#opsSearch").value || "").trim().toLowerCase();
+  if (!q) return f1.operations;
+  return f1.operations.filter(o => String(o.assetKey||"").toLowerCase().includes(q));
+}
+function renderOpsTable(f1) {
+  const filtered = getOpsFiltered(f1);
+  const total = filtered.length;
+
+  const pageSize = opsView.pageSize;
+  const maxPage = Math.max(0, Math.ceil(total / pageSize) - 1);
+  opsView.page = Math.max(0, Math.min(maxPage, opsView.page));
+
+  const from = opsView.page * pageSize;
+  const to = Math.min(total, from + pageSize);
+  const slice = filtered.slice(from, to);
+
+  setStatus($("#opsPageInfo"), `Показано: ${from+1}-${to} з ${total} (сторінка ${opsView.page+1}/${maxPage+1})`);
+
+  renderTable($("#tblOps"), [
+    { label:"Дата закриття", value:(r)=>r.closeDate },
+    { label:"assetKey", value:(r)=>r.assetKey },
+    { label:"К-ть (abs)", value:(r)=>r.qtyAbs, num:true },
+    { label:"Дохід", value:(r)=>r.incomeUAH, num:true },
+    { label:"Витрати", value:(r)=>r.costUAH, num:true },
+    { label:"Результат", value:(r)=>r.resultUAH, num:true },
+  ], slice);
+
+  $("#opsDetails").style.display = "block";
+}
+
+$("#f1Search").addEventListener("input", () => { if (state.f1) renderF1Table(state.f1); });
+$("#opsSearch").addEventListener("input", () => { opsView.page = 0; if (state.f1) renderOpsTable(state.f1); });
+$("#opsPrev").addEventListener("click", () => { opsView.page--; if (state.f1) renderOpsTable(state.f1); });
+$("#opsNext").addEventListener("click", () => { opsView.page++; if (state.f1) renderOpsTable(state.f1); });
+$("#opsCopyCount").addEventListener("click", async () => {
+  if (!state.f1) return;
+  const n = state.f1.operations.length;
+  const ok = await copyText(String(n));
+  $("#opsCopyCount").textContent = ok ? "Скопійовано" : "Не вдалося";
+  setTimeout(()=>$("#opsCopyCount").textContent="Копіювати кількість", 1100);
+});
+
+$("#f1AssetTypeMode").addEventListener("change", () => {
+  $("#manualMapWrap").style.display = ($("#f1AssetTypeMode").value === "MANUAL") ? "block" : "none";
+  saveSettings();
+  markResultsStale();
+});
+[
+  "#taxYear","#pitInvestRate","#milInvestRate","#pitDivRate","#milDivRate",
+  "#carryLossUAH","#useForeignTaxCredit","#treatPILasDividend","#f1ManualMap"
+].forEach(sel => {
+  const el = $(sel);
+  if (!el) return;
+  el.addEventListener("change", () => {
+    saveSettings();
+    updateStep2FxUi();
+    updateCalcReadiness();
+    markResultsStale();
+    updateNav();
+  });
+});
+
+$("#btnCalc").addEventListener("click", async () => {
+  if (!state.statement) return;
+  try {
+    $("#btnCalc").disabled = true;
+    $("#btnExportXlsx").disabled = true;
+    $("#btnExportCsv").disabled = true;
+    $("#btnPrintF1").disabled = true;
+    $("#btnDownloadDebug").disabled = true;
+
+    const settings = readSettings();
+
+    setStatus($("#statusCalc"), "Перевіряю курси…");
+    const rep = getFxCoverageReport(state.statement, settings.taxYear);
+    if (!rep.ready) throw new Error("Курси НБУ завантажені не повністю. Поверніться у крок 2.");
+
+    setStatus($("#statusCalc"), "Розраховую FIFO (інвест‑результат)…");
+    const fifo = await fifoInUAH(state.statement.trades);
+    state.fifo = fifo;
+
+    setStatus($("#statusCalc"), "Розраховую дивіденди та утриманий податок…");
+    const div = await computeDividendsUAH(state.statement, settings);
+    const whDiv = await computeWithholdingOnDivUAH(state.statement, settings);
+
+    setStatus($("#statusCalc"), "Формую Ф1…");
+    const f1 = buildF1Model(state.statement, state.assetIndex, fifo.matches, settings);
+    state.f1 = f1;
+
+    const divUAH = round2(div.totalUAH);
+    const whDivUAH = round2(whDiv.totalUAH);
+
+    const divPITgross = round2(divUAH * settings.pitDivRate);
+    const divMIL = round2(divUAH * settings.milDivRate);
+    const credit = settings.useForeignTaxCredit ? Math.min(divPITgross, whDivUAH) : 0;
+    const divPITdue = round2(divPITgross - credit);
+
+    const totalPIT = round2(f1.investTaxes.pitDueUAH + divPITdue);
+    const totalMIL = round2(f1.investTaxes.milDueUAH + divMIL);
+
+    const taxSummary = {
+      invest: {
+        incomeUAH: f1.totals.totalIncomeUAH,
+        costUAH: f1.totals.totalCostUAH,
+        resultUAH: f1.totals.totalResultUAH,
+        carryLossUAH: f1.totals.carryLossUAH,
+        netResultUAH: f1.totals.netResultUAH,
+        netProfitUAH: f1.totals.netProfitUAH,
+        pitUAH: f1.investTaxes.pitDueUAH,
+        milUAH: f1.investTaxes.milDueUAH,
+      },
+      dividends: {
+        dividendsUAH: divUAH,
+        withholdingDivUAH: whDivUAH,
+        pitGrossUAH: divPITgross,
+        creditUAH: round2(credit),
+        pitDueUAH: divPITdue,
+        milUAH: divMIL
+      },
+      totals: {
+        pitUAH: totalPIT,
+        milUAH: totalMIL,
+        totalUAH: round2(totalPIT + totalMIL),
+      }
+    };
+    state.taxSummary = taxSummary;
+
+    renderSummaryCards(taxSummary);
+
+    // exports enabled
+    $("#exportBtns").style.display = "flex";
+    $("#btnExportXlsx").disabled = false;
+    $("#btnExportCsv").disabled = false;
+    $("#btnPrintF1").disabled = false;
+    $("#btnDownloadDebug").disabled = false;
+
+    // declaration hints
+    renderDeclarationTable(state.statement, f1, taxSummary, settings);
+
+    // tables
+    $("#f1Details").style.display = "block";
+    renderF1Table(f1);
+    $("#opsDetails").style.display = "block";
+    opsView.page = 0;
+    renderOpsTable(f1);
+
+    // step 4 readiness
+    $("#btnShowLosers").disabled = false;
+    $("#btnCopyLosers").disabled = false;
+
+    setStatus($("#statusCalc"), "Готово ✅", "good");
+    updateNav();
+  } catch (e) {
+    console.error(e);
+    setStatus($("#statusCalc"), "Помилка розрахунку:\n" + (e?.message || String(e)), "bad");
+    updateNav();
+  } finally {
+    $("#btnCalc").disabled = false;
+  }
+});
+
+$("#btnExportCsv").addEventListener("click", () => {
+  if (!state.f1) return;
+  exportCsvF1AndOps(state.f1);
+});
+$("#btnPrintF1").addEventListener("click", () => {
+  if (!state.f1) return;
+  exportPrintableF1(state.f1);
+});
+$("#btnExportXlsx").addEventListener("click", async () => {
+  if (!state.statement || !state.f1 || !state.taxSummary) return;
+  await exportXlsx(state.statement, state.f1, state.taxSummary, readSettings());
+});
+$("#btnDownloadDebug").addEventListener("click", () => {
+  if (!state.statement) return;
+  const obj = {
+    statement: state.statement,
+    fxMeta: fxStore.meta,
+    computed: {
+      fifo: state.fifo,
+      f1: state.f1,
+      taxSummary: state.taxSummary
+    }
+  };
+  downloadBlob(`debug_${state.statement.meta.fileName}.json`, "application/json;charset=utf-8", JSON.stringify(obj, null, 2));
+});
+
+/* =========================
+   Step 4: losers
+========================= */
+let lastLosersRows = [];
+
+function assetKeyToUnderlyingSymbol(assetKey){
+  const parts = String(assetKey || "").split("|");
+  // STK|USD|TLT  or  OPT|USD|TLT|2026-01-17|90|C
+  return (parts.length >= 3 && parts[2]) ? parts[2] : String(assetKey || "");
+}
+
+function openSimFromPosition(pos){
+  if (!pos) return;
+  try {
+    const d = $("#simDetails");
+    if (d) d.open = true;
+
+    const ak = (pos && pos.asset ? pos.asset.assetKey : "");
+    const ccy = (pos && pos.asset ? pos.asset.currency : "");
+    const sym = assetKeyToUnderlyingSymbol(ak) || (pos && pos.asset ? (pos.asset.symbolRaw || "") : "");
+
+    const todayIso = new Date().toISOString().slice(0,10);
+
+    // Fill “sell” fields
+    if ($("#simUnderlyingKey")) $("#simUnderlyingKey").value = ak;
+    if ($("#simSellQty")) $("#simSellQty").value = String(Math.abs(Number(pos.quantity || 0)));
+    if ($("#simSellCcy") && ccy) $("#simSellCcy").value = ccy;
+
+    // Best-effort: prefill net cash from current “Value” of the position (IB Open Positions)
+    // (user should adjust to real execution price + commissions)
+    if ($("#simSellCalcMode")) $("#simSellCalcMode").value = "MANUAL";
+    if ($("#simSellNetCash") && Number.isFinite(pos.value)) {
+      $("#simSellNetCash").value = String(pos.value);
+    }
+
+    if ($("#simSellDate")) $("#simSellDate").value = ($("#simSellDate").value || todayIso);
+
+    // Fill “option” defaults
+    if ($("#simOptUnderlying") && sym) $("#simOptUnderlying").value = sym;
+    if ($("#simOptCcy") && ccy) $("#simOptCcy").value = ccy;
+    if ($("#simOptBuyDate")) $("#simOptBuyDate").value = ($("#simOptBuyDate").value || todayIso);
+
+    // Years (default: current tax year + next)
+    const ty = Number($("#taxYear")?.value || 2025);
+    if ($("#simYearA")) $("#simYearA").value = String(ty);
+    if ($("#simYearB")) $("#simYearB").value = String(ty + 1);
+
+    // Enable scenario actions (calculation may be added later)
+    if ($("#btnSimRun")) $("#btnSimRun").disabled = false;
+    if ($("#btnSimReset")) $("#btnSimReset").disabled = false;
+
+    if (d) d.scrollIntoView({behavior:"smooth", block:"start"});
+    setTimeout(() => { if ($("#simSellDate")) $("#simSellDate").focus(); }, 240);
+
+    showToast(`Сценарій заповнено з позиції: ${sym}`, "success", 2600);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function resetSimForm(){
+  try{
+    const els = [
+      "#simUnderlyingKey","#simSellQty","#simSellNetCash","#simSellPrice","#simSellFee","#simSellDate",
+      "#simOptUnderlying","#simOptBuyDate","#simOptExpiry","#simOptStrike","#simOptRight","#simOptContracts",
+      "#simOptPremium","#simOptFee",
+      "#simOptOutcome","#simOptCloseDate","#simOptClosePremium","#simOptCloseFee",
+      "#simExerciseStockPrice"
+    ];
+    els.forEach(sel => { const el = $(sel); if (el) el.value = ""; });
+    if ($("#simSellCalcMode")) $("#simSellCalcMode").value = "MANUAL";
+    if ($("#simSellCcy")) $("#simSellCcy").value = "USD";
+    if ($("#simOptCcy")) $("#simOptCcy").value = "USD";
+    if ($("#simPickPosition")) $("#simPickPosition").value = "";
+    if ($("#simStatus")) setStatus($("#simStatus"), "Очікую дані сценарію…", "");
+    if ($("#simBaseCards")) $("#simBaseCards").style.display = "none";
+    if ($("#simScenarioCards")) $("#simScenarioCards").style.display = "none";
+    if ($("#simDeltaCards")) $("#simDeltaCards").style.display = "none";
+    showToast("Сценарій очищено", "info", 2000);
+  }catch(e){ console.error(e); }
+}
+
+function buildSimPickOptionsFromLosers(rows){
+  const sel = $("#simPickPosition");
+  if (!sel) return;
+
+  const prev = sel.value;
+
+  // Base options
+  sel.innerHTML = `
+    <option value="" selected>— оберіть —</option>
+    <option value="MANUAL">Ввести вручну</option>
+  `;
+
+  if (rows && rows.length) {
+    const og = document.createElement("optgroup");
+    og.label = "Збиткові позиції (можна клікнути assetKey у таблиці вище)";
+    const seen = new Set();
+    rows.forEach((r) => {
+      const ak = r?.p?.asset?.assetKey || "";
+      if (!ak || seen.has(ak)) return;
+      seen.add(ak);
+      const sym = r?.p?.asset?.symbolRaw || assetKeyToUnderlyingSymbol(ak);
+      const opt = document.createElement("option");
+      opt.value = ak;
+      opt.textContent = `${sym} • ${ak} • збиток ≈ ${fmt2(r.lossUAH)} грн`;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  }
+
+  // Restore selection if still exists
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+function decorateLosersTable(table, rows){
+  try{
+    const tbody = table?.querySelector("tbody");
+    if (!tbody) return;
+
+    const trs = Array.from(tbody.querySelectorAll("tr"));
+    trs.forEach((tr, idx) => {
+      const r = rows[idx];
+      if (!r) return;
+
+      // assetKey column is 2nd (index 1)
+      const td = tr.children[1];
+      if (!td) return;
+
+      const ak = r.p.asset.assetKey;
+      td.classList.add("mono");
+      td.innerHTML = `<button type="button" class="assetKeyBtn" data-idx="${idx}" title="Натисніть, щоб заповнити сценарій моделювання">${escapeHtml(ak)}</button>`;
+
+      // Make whole row clickable too (nice on mobile)
+      tr.style.cursor = "pointer";
+      tr.addEventListener("click", () => openSimFromPosition(r.p));
+    });
+
+    table.querySelectorAll("button.assetKeyBtn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = Number(btn.dataset.idx);
+        const r = rows[idx];
+        if (r) openSimFromPosition(r.p);
+      });
+    });
+  }catch(e){ console.error(e); }
+}
+
+// Wiring: select + quick-fill + reset
+$("#simPickPosition").addEventListener("change", () => {
+  const v = $("#simPickPosition").value;
+  if (!v || v === "MANUAL") return;
+  const pos = state.statement?.positions?.find(p => p.asset?.assetKey === v);
+  if (pos) openSimFromPosition(pos);
+});
+$("#btnSimUseLoser").addEventListener("click", () => {
+  if (lastLosersRows?.length) openSimFromPosition(lastLosersRows[0].p);
+  else showToast("Спочатку натисніть «Показати» у таблиці збиткових позицій.", "warn", 3600);
+});
+$("#btnSimReset").addEventListener("click", resetSimForm);
+
+let lastLosersCsv = "";
+
+$("#btnShowLosers").addEventListener("click", async () => {
+  if (!state.statement || !state.taxSummary) return;
+
+  try {
+    const asOf = ($("#asOfDate").value || "").trim();
+    const topN = Number($("#topN").value || 15);
+
+    const pitRate = Number($("#pitInvestRate").value);
+    const milRate = Number($("#milInvestRate").value);
+    const netProfit = state.taxSummary.invest.netProfitUAH;
+
+    setStatus($("#losersBox"), "Розраховую…");
+    const rows = await computeTopLosers(state.statement, asOf, topN, netProfit, pitRate, milRate);
+
+    // store for simulation module (click assetKey to prefill)
+    lastLosersRows = rows;
+    buildSimPickOptionsFromLosers(rows);
+    $("#btnSimUseLoser").disabled = rows.length === 0;
+
+    const cols = [
+      { label:"Актив", value:(r)=>r.p.asset.symbolRaw },
+      { label:"assetKey", value:(r)=>r.p.asset.assetKey },
+      { label:"К-ть", value:(r)=>r.p.quantity, num:true },
+      { label:"Валюта", value:(r)=>r.p.asset.currency },
+      { label:"Нереаліз. (грн)", value:(r)=>r.unrealizedUAH, num:true },
+      { label:"Збиток (грн)", value:(r)=>r.lossUAH, num:true },
+      { label:"Оцінка економії податку", value:(r)=>r.estTaxSaved, num:true },
+    ];
+
+    // build table HTML
+    const table = document.createElement("table");
+    renderTable(table, cols, rows);
+    decorateLosersTable(table, rows);
+
+    // build CSV for copy
+    const csvRows = [
+      ["Актив","assetKey","К-ть","Валюта","Нереаліз.(грн)","Збиток(грн)","Економія(оцінка)"],
+      ...rows.map(r => [
+        r.p.asset.symbolRaw,
+        r.p.asset.assetKey,
+        r.p.quantity,
+        r.p.asset.currency,
+        fmt2(r.unrealizedUAH),
+        fmt2(r.lossUAH),
+        fmt2(r.estTaxSaved)
+      ])
+    ];
+    lastLosersCsv = toCsv(csvRows);
+
+    // render
+    const wrap = document.createElement("div");
+    wrap.className = "tableWrap";
+    wrap.appendChild(table);
+
+
+    const hint = document.createElement("div");
+    hint.className = "inlineHelp";
+    hint.textContent = "Порада: натисніть assetKey у таблиці вище, щоб автоматично заповнити сценарій «Моделювання» нижче.";
+
+    const info = [
+      `Дата FX: ${asOf}`,
+      `Інвест‑прибуток (для оцінки економії): ${fmt2(netProfit)} грн`,
+      `Показано: ${rows.length}`
+    ].join("\n");
+
+    $("#losersBox").innerHTML = "";
+    const pre = document.createElement("div");
+    pre.className = "status";
+    pre.textContent = info;
+    $("#losersBox").appendChild(pre);
+    $("#losersBox").appendChild(wrap);
+    $("#losersBox").appendChild(hint);
+  } catch (e) {
+    console.error(e);
+    setStatus($("#losersBox"), "Помилка:\n" + (e?.message || String(e)), "bad");
+  }
+});
+
+$("#btnCopyLosers").addEventListener("click", async () => {
+  if (!lastLosersCsv) return;
+  const ok = await copyText(lastLosersCsv);
+  $("#btnCopyLosers").textContent = ok ? "Скопійовано" : "Не вдалося";
+  setTimeout(()=>$("#btnCopyLosers").textContent="Копіювати таблицю (CSV)", 1200);
+});
+
+/* =========================
+   Init
+========================= */
+(function init(){
+  // mode badge
+  if (location.protocol === "file:") {
+    $("#badgeMode").textContent = "⚠️ file:// режим (NBU fetch може бути заблоковано)";
+    $("#badgeMode").classList.add("warn");
+  }
+  updateFileSchemeBanner();
+
+  loadSettings();
+  updateStep2FxUi();
+  updateCalcReadiness();
+
+  // Make drop zones clickable (mouse + keyboard)
+  makeClickableDrop("#dropCsv", "#fileCsv");
+  makeClickableDrop("#dropFx", "#fxFiles");
+
+  $("#btnPickCsv").addEventListener("click", () => {});
+  $("#btnPickFx").addEventListener("click", () => {});
+
+  // manual map visibility
+  $("#manualMapWrap").style.display = ($("#f1AssetTypeMode").value === "MANUAL") ? "block" : "none";
+
+  setStatus($("#csvInfo"), "Очікую CSV…");
+  setStatus($("#statusUpload"), "Статус: очікую файл.");
+  setStatus($("#fxStatus"), "Курси ще не завантажені.");
+
+  // stepper click already wired
+  updateNav();
+})();
+</script>
+</body>
+</html>
