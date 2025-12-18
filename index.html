@@ -198,6 +198,175 @@
 
     .inlineHelp{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.45}
     .hidden{display:none !important}
+  
+/* =========================
+   UI/UX polish patch (append)
+========================= */
+:root{
+  color-scheme: dark;
+
+  /* richer background without changing your palette */
+  --bg-gradient:
+    radial-gradient(1100px 600px at 85% -10%, rgba(45,108,223,0.22) 0%, rgba(11,15,23,1) 60%),
+    radial-gradient(900px 520px at -10% 0%, rgba(46,229,157,0.10) 0%, rgba(11,15,23,1) 55%);
+
+  --surface: rgba(18,26,39,0.72);
+  --surface2: rgba(255,255,255,0.03);
+  --border1: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.05);
+  --focus: rgba(157,193,255,0.95);
+  --shadow-lg: 0 14px 50px -16px rgba(0,0,0,0.62);
+}
+
+body{
+  background: var(--bg-gradient);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.card{
+  background: var(--surface);
+  border-color: var(--border2);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+}
+
+.topbar{
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgba(11,15,23,0.82);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border2);
+  padding-top: 10px;
+}
+
+/* give content space for fixed footer + safe area */
+main{
+  padding-bottom: calc(120px + env(safe-area-inset-bottom));
+}
+
+/* Focus ring: keyboard + accessibility */
+input[type="file"],input[type="number"],input[type="text"],select,textarea{
+  border-color: var(--border1);
+}
+input:focus,select:focus,textarea:focus,button:focus-visible{
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Buttons feel more “alive” */
+button{
+  transition: transform 120ms ease, filter 120ms ease;
+}
+button:hover:not(:disabled){
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+button:active:not(:disabled){
+  transform: translateY(0);
+  filter: brightness(1.02);
+}
+
+/* Drop zones: clickable, hover hint */
+.drop{
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.drop:hover{
+  border-color: rgba(45,108,223,0.55);
+  background: rgba(45,108,223,0.06);
+  transform: translateY(-1px);
+}
+
+/* Step transitions: less “jump” */
+.wStep.active{
+  animation: stepIn 220ms ease-out;
+}
+@keyframes stepIn{
+  from{ opacity: 0; transform: translateY(8px); }
+  to  { opacity: 1; transform: translateY(0); }
+}
+
+/* Tables: readability */
+th{
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  background: rgba(18,26,39,0.92);
+}
+tbody tr:nth-child(2n) td{
+  background: rgba(255,255,255,0.01);
+}
+tr:hover td{
+  background: rgba(255,255,255,0.02);
+}
+
+/* Optional numeric tone */
+td.num.pos{ color: var(--good); }
+td.num.neg{ color: var(--bad); }
+td.num.zero{ color: var(--muted); opacity: 0.85; }
+
+/* Top progress line inside topbar */
+.progressTop{
+  flex-basis: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.progressTop > div{
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(45,108,223,0.95), rgba(46,229,157,0.95));
+  transition: width 240ms ease;
+}
+
+/* Toast notifications */
+.toast-container{
+  position: fixed;
+  right: 16px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 32px));
+}
+.toast{
+  background: rgba(18,26,39,0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border1);
+  border-left-width: 4px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  font-size: 13px;
+  line-height: 1.35;
+  animation: toastIn 160ms ease-out;
+}
+.toast.info{ border-left-color: rgba(157,193,255,0.9); }
+.toast.success{ border-left-color: rgba(46,229,157,0.75); }
+.toast.warn{ border-left-color: rgba(255,209,102,0.85); }
+.toast.error{ border-left-color: rgba(255,107,107,0.85); }
+@keyframes toastIn{
+  from{ opacity: 0; transform: translateY(6px); }
+  to  { opacity: 1; transform: translateY(0); }
+}
+
+/* Screen-reader only utility */
+.srOnly{
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
   </style>
 </head>
 
@@ -213,6 +382,11 @@
 </header>
 
 <div class="topbar">
+
+  <div class="progressTop" aria-hidden="true">
+    <div id="topProgressBar"></div>
+  </div>
+
   <div class="stepper" id="stepper">
     <div class="stepBtn" data-step="1"><span class="stepNum">1</span> Звіт IB</div>
     <div class="stepBtn locked" data-step="2"><span class="stepNum">2</span> Курси НБУ</div>
@@ -545,6 +719,11 @@
   </div>
 </footer>
 
+
+<div id="ariaLive" class="srOnly" aria-live="polite"></div>
+<div class="toast-container" id="toastContainer" aria-hidden="true"></div>
+
+
 <script>
 /* =========================
    Helpers
@@ -611,6 +790,58 @@ async function copyText(text) {
     try { document.execCommand("copy"); ta.remove(); return true; } catch { ta.remove(); return false; }
   }
 }
+
+
+function announce(msg){
+  const el = $("#ariaLive");
+  if (!el) return;
+  // reset to make screen readers re-announce same text
+  el.textContent = "";
+  setTimeout(() => { el.textContent = String(msg || ""); }, 30);
+}
+
+function showToast(msg, type="info", timeout=3600){
+  const c = $("#toastContainer");
+  if (!c) return;
+
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = String(msg || "");
+  c.appendChild(t);
+
+  // make it screen-reader visible through ariaLive
+  announce(msg);
+
+  setTimeout(() => {
+    t.style.opacity = "0";
+    t.style.transform = "translateY(6px)";
+    t.style.transition = "opacity 180ms ease, transform 180ms ease";
+    setTimeout(() => t.remove(), 220);
+  }, timeout);
+}
+
+function makeClickableDrop(zoneSel, inputSel){
+  const z = $(zoneSel);
+  const inp = $(inputSel);
+  if (!z || !inp) return;
+
+  z.setAttribute("role","button");
+  z.setAttribute("tabindex","0");
+
+  z.addEventListener("click", (e) => {
+    // don't hijack clicks on buttons inside the zone
+    if (e.target.closest("button, input, a, summary")) return;
+    inp.click();
+  });
+  z.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      inp.click();
+    }
+  });
+}
+
+
 
 /* =========================
    CSV parsing
@@ -1578,7 +1809,15 @@ function renderTable(el, columns, rows) {
     return "<tr>" + columns.map(c => {
       let v = (typeof c.value === "function") ? c.value(r) : r[c.value];
       if (c.num && Number.isFinite(v)) v = fmt2(v);
-      const cls = c.num ? "num" : "";
+      let cls = c.num ? "num" : "";
+      if (c.num) {
+        const vv = (typeof c.value === "function") ? c.value(r) : r[c.value];
+        if (Number.isFinite(vv)) {
+          if (vv > 0) cls += " pos";
+          else if (vv < 0) cls += " neg";
+          else cls += " zero";
+        }
+      }
       return `<td class="${cls}">${escapeHtml(v)}</td>`;
     }).join("") + "</tr>";
   }).join("") + "</tbody>";
@@ -1776,7 +2015,7 @@ function buildDeclarationHintsAoA(statement, f1, taxSummary, settings) {
 async function exportXlsx(statement, f1, taxSummary, settings) {
   const ok = await ensureSheetJS();
   if (!ok || !window.XLSX) {
-    alert("Не вдалося завантажити бібліотеку XLSX (можливо, немає інтернету). Використайте CSV або друк.");
+    showToast("Не вдалося завантажити XLSX (можливо, немає інтернету). Використайте CSV або друк.", "error", 5200);
     return;
   }
   const XLSX = window.XLSX;
@@ -1962,6 +2201,18 @@ function loadSettings() {
 ========================= */
 const wizard = { step: 1 };
 
+
+function getDoneCount(){
+  return (isStep1Done()?1:0) + (isStep2Done()?1:0) + (isStep3Done()?1:0);
+}
+function updateTopProgress(){
+  const bar = $("#topProgressBar");
+  if (!bar) return;
+  const pct = Math.round((getDoneCount() / 3) * 100);
+  bar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+}
+
+
 function stepEl(n){ return document.querySelector(`section.wStep[data-step="${n}"]`); }
 function stepBtnEl(n){ return document.querySelector(`.stepBtn[data-step="${n}"]`); }
 
@@ -2026,6 +2277,8 @@ function updateNav(){
     const b = stepBtnEl(i);
     b.classList.toggle("locked", !canEnterStep(i));
   }
+
+  updateTopProgress();
 }
 
 document.querySelectorAll(".stepBtn").forEach(b => {
@@ -2547,6 +2800,7 @@ function renderDeclarationTable(statement, f1, taxSummary, settings) {
     btn.addEventListener("click", async () => {
       const t = btn.getAttribute("data-copy") || "";
       const ok = await copyText(t);
+      showToast(ok ? "Скопійовано ✅" : "Не вдалося скопіювати", ok ? "success" : "error");
       btn.textContent = ok ? "Скопійовано" : "Не вдалося";
       setTimeout(()=>btn.textContent="Копіювати", 1100);
     });
@@ -2856,6 +3110,10 @@ $("#btnCopyLosers").addEventListener("click", async () => {
   loadSettings();
   updateStep2FxUi();
   updateCalcReadiness();
+
+  // Make drop zones clickable (mouse + keyboard)
+  makeClickableDrop("#dropCsv", "#fileCsv");
+  makeClickableDrop("#dropFx", "#fxFiles");
 
   $("#btnPickCsv").addEventListener("click", () => {});
   $("#btnPickFx").addEventListener("click", () => {});
