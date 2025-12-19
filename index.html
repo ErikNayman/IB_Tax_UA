@@ -1279,6 +1279,17 @@ function parseIBDateTime(s) {
 }
 function minIso(a,b){ if(!a) return b; if(!b) return a; return a < b ? a : b; }
 function maxIso(a,b){ if(!a) return b; if(!b) return a; return a > b ? a : b; }
+function isoAddDays(isoDate, deltaDays){
+  const parts = String(isoDate || "").split("-");
+  if (parts.length !== 3) return isoDate;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const d = parseInt(parts[2], 10);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return isoDate;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + (Number(deltaDays) || 0));
+  return dt.toISOString().slice(0,10);
+}
 
 /* =========================
    Options parser + assetKey
@@ -1644,16 +1655,17 @@ function fxCurrenciesLoaded(){ return Array.from(fxStore.maps.keys()).sort(); }
 
 function fxRateSync(currency, isoDate) {
   const ccy = String(currency||"").toUpperCase();
-  if (ccy === "UAH") return 1;
+  if (!ccy || ccy === "UAH") return 1;
+
   const mp = fxStore.maps.get(ccy);
   if (!mp) return null;
+
   if (mp.has(isoDate)) return mp.get(isoDate);
 
-  // fallback: попередній робочий день (до 10 днів)
-  let d = new Date(isoDate + "T00:00:00");
-  for (let i=0; i<10; i++) {
-    d.setDate(d.getDate() - 1);
-    const iso = d.toISOString().slice(0,10);
+  // fallback: попередній доступний курс (вихідні/свята), рахуємо в UTC щоб уникнути зсуву дат
+  const FALLBACK_DAYS = 31;
+  for (let i = 1; i <= FALLBACK_DAYS; i++) {
+    const iso = isoAddDays(isoDate, -i);
     if (mp.has(iso)) return mp.get(iso);
   }
   return null;
@@ -1817,31 +1829,41 @@ function computeFxNeeds(statement, taxYear) {
     maxDate = maxIso(maxDate, t.tradeDate);
   }
 
+  // include cash incomes / withholdings only for the selected tax year
   for (const ci of statement.cashIncomes) {
-    if (!ci.date || !ci.date.startsWith(yPrefix)) continue;
+    if (!ci.date || !String(ci.date).startsWith(yPrefix)) continue;
     minDate = minIso(minDate, ci.date);
     maxDate = maxIso(maxDate, ci.date);
   }
   for (const w of statement.withholdings) {
-    if (!w.date || !w.date.startsWith(yPrefix)) continue;
+    if (!w.date || !String(w.date).startsWith(yPrefix)) continue;
     minDate = minIso(minDate, w.date);
     maxDate = maxIso(maxDate, w.date);
   }
 
+  // positions might extend the needed range to the report's "as of" date
   const asOf = statement.meta.asOfDate || statement.meta.periodEnd;
-  if (asOf) { minDate = minIso(minDate, asOf); maxDate = maxIso(maxDate, asOf); }
+  if (asOf) {
+    minDate = minIso(minDate, asOf);
+    maxDate = maxIso(maxDate, asOf);
+  }
 
+  // fallback if something is missing
   if (!minDate) minDate = statement.meta.periodStart || `${taxYear}-01-01`;
   if (!maxDate) maxDate = statement.meta.periodEnd || `${taxYear}-12-31`;
 
-  const curSet = new Set();
-  for (const t of statement.trades) curSet.add(t.asset.currency);
-  for (const ci of statement.cashIncomes) if (ci.date && ci.date.startsWith(yPrefix)) curSet.add(ci.currency);
-  for (const w of statement.withholdings) if (w.date && w.date.startsWith(yPrefix)) curSet.add(w.currency);
-  for (const p of statement.positions) curSet.add(p.asset.currency);
-  curSet.delete("UAH");
+  // IMPORTANT: small buffer backwards so weekends/holidays can fallback to a prior working day
+  const BUFFER_DAYS = 14;
+  const startIso = minDate ? isoAddDays(minDate, -BUFFER_DAYS) : minDate;
 
-  return { startIso:minDate, endIso:maxDate, currencies:Array.from(curSet).sort() };
+  const cur = new Set();
+  for (const t of statement.trades) cur.add(t.currency);
+  for (const ci of statement.cashIncomes) if (ci.date && String(ci.date).startsWith(yPrefix)) cur.add(ci.currency);
+  for (const w of statement.withholdings) if (w.date && String(w.date).startsWith(yPrefix)) cur.add(w.currency);
+  for (const p of statement.positions) cur.add(p.currency);
+
+  cur.delete("UAH");
+  return { currencies: [...cur].sort(), startIso, endIso: maxDate, bufferDays: BUFFER_DAYS };
 }
 
 function buildFxLinksHtml(needs) {
@@ -2954,7 +2976,8 @@ function updateStep2FxUi() {
 
   const needs = rep.needs;
   const needText = needs.currencies.length ? needs.currencies.join(", ") : "—";
-  const rangeText = `${needs.startIso} → ${needs.endIso}`;
+  const buf = needs.bufferDays ? ` (буфер -${needs.bufferDays} дн.)` : "";
+  const rangeText = `${needs.startIso} → ${needs.endIso}${buf}`;
 
   setStatus($("#fxNeedSummary"),
     `Валюти: ${needText}\nДіапазон: ${rangeText}`,
@@ -3825,9 +3848,10 @@ function updateSimOutcomeUi(){
   const buy = valStr("#simOptBuyDate");
   const expEl = $("#simOptExpiry");
   if (optOn && expEl && isIsoDate(buy) && !isIsoDate(expEl.value)) {
-    const d = new Date(buy + "T00:00:00");
-    d.setFullYear(d.getFullYear() + 1);
-    expEl.value = d.toISOString().slice(0,10);
+    const parts = buy.split("-").map(x => parseInt(x, 10));
+    const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    dt.setUTCFullYear(dt.getUTCFullYear() + 1);
+    expEl.value = dt.toISOString().slice(0,10);
   }
 
   // Синхронізуємо роки з дат (щоб “по роках” було інтуїтивно)
