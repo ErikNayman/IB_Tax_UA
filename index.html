@@ -927,6 +927,7 @@ td.num.zero{ color: var(--muted); opacity: 0.85; }
           <label>Премія (ціна опціону за 1 акцію; як котирується в IB)</label>
           <input id="simOptPremium" type="number" step="0.0001" value="0" />
         </div>
+            <div class="small" id="simOptAutoHint">Автозаповнення: —</div>
       </div>
 
       <div class="row">
@@ -3352,6 +3353,11 @@ $("#btnCalc").addEventListener("click", async () => {
     $("#btnCopyLosers").disabled = false;
     // Simulation base cards (tax harvesting + options)
     if (typeof updateSimBaseCards === "function") updateSimBaseCards();
+    // Автозаповнення сценарію — тільки якщо користувач уже відкрив модуль «Моделювання…»
+    const simDetailsEl = $("#simDetails");
+    if (simDetailsEl?.open && typeof simAutoPrefillDefaultScenario === "function") {
+      simAutoPrefillDefaultScenario();
+    }
 
     setStatus($("#statusCalc"), "Готово ✅", "good");
     updateNav();
@@ -3401,54 +3407,89 @@ function assetKeyToUnderlyingSymbol(assetKey){
   return (parts.length >= 3 && parts[2]) ? parts[2] : String(assetKey || "");
 }
 
-function openSimFromPosition(pos){
-  if (!pos) return;
-  try {
-    const d = $("#simDetails");
-    if (d) d.open = true;
+function openSimFromPosition(pos, opts = {}){
+  const autoRun = (opts.autoRun !== false);
+  const silent  = !!opts.silent;
 
-    const ak = (pos && pos.asset ? pos.asset.assetKey : "");
-    const ccy = (pos && pos.asset ? pos.asset.currency : "");
-    const sym = assetKeyToUnderlyingSymbol(ak) || (pos && pos.asset ? (pos.asset.symbolRaw || "") : "");
+  const key = pos?.asset?.assetKey || pos?.asset?.symbolRaw || "";
+  if (!key) {
+    if (!silent) showToast("Не вдалось визначити assetKey позиції", "warn", 4200);
+    return;
+  }
 
-    const todayIso = new Date().toISOString().slice(0,10);
+  const sym = pos?.asset?.symbolRaw || (key.split("|").pop() || key);
 
-    // Fill “sell” fields
-    if ($("#simUnderlyingKey")) $("#simUnderlyingKey").value = ak;
-    if ($("#simSellQty")) $("#simSellQty").value = String(Math.abs(Number(pos.quantity || 0)));
-    if ($("#simSellCcy") && ccy) $("#simSellCcy").value = ccy;
+  // 1) Підставляємо продаж базового активу (рік A)
+  if ($("#simUnderlyingKey")) $("#simUnderlyingKey").value = key;
+  if ($("#simSellQty")) $("#simSellQty").value = Math.abs(pos?.quantity || 0);
 
-    // Best-effort: prefill net cash from current “Value” of the position (IB Open Positions)
-    // (user should adjust to real execution price + commissions)
-    if ($("#simSellCalcMode")) $("#simSellCalcMode").value = "MANUAL";
-    if ($("#simSellNetCash") && Number.isFinite(pos.value)) {
-      $("#simSellNetCash").value = String(pos.value);
+  const asOf = ($("#asOfDate")?.value || state.statement?.meta?.asOfDate || "").trim();
+  if (asOf && $("#simSellDate")) $("#simSellDate").value = asOf;
+
+  if (Number.isFinite(pos?.value) && $("#simSellNetCash")) $("#simSellNetCash").value = round2(pos.value);
+  if (pos?.asset?.currency && $("#simSellCcy")) $("#simSellCcy").value = pos.asset.currency;
+
+  if ($("#simSellPlHint")) {
+    $("#simSellPlHint").textContent = Number.isFinite(pos?.unrealizedPL) ? fmtMoney(pos.unrealizedPL) : "—";
+  }
+
+  // 2) Податкові роки: за замовчуванням B = A + 1
+  updateSimYearsOptions();
+  const yearA = Number($("#taxYear")?.value) || Number((asOf || "").slice(0,4)) || state.taxYear || new Date().getFullYear();
+  if ($("#simYearA")) $("#simYearA").value = String(yearA);
+  if ($("#simYearB")) $("#simYearB").value = String(yearA + 1);
+  updateSimYearsOptions(); // щоб значення точно лишились після перебудови options
+
+  const yearB = Number($("#simYearB")?.value) || (yearA + 1);
+
+  // 3) Підставляємо купівлю Call (щоб зберегти експозицію)
+  if ($("#simOptUnderlying")) $("#simOptUnderlying").value = sym;
+  if ($("#simOptBuyDate")) $("#simOptBuyDate").value = $("#simSellDate")?.value || asOf || "";
+
+  // Автозаповнення параметрів опціону на основі Last≈Value/Qty
+  const qtyShares = Math.abs(valNum($("#simSellQty"), 0) || 0);
+  let lastPrice = null;
+  if (Number.isFinite(pos?.value) && Number.isFinite(pos?.quantity) && pos.quantity !== 0) {
+    lastPrice = Math.abs(pos.value / pos.quantity);
+  }
+
+  if (Number.isFinite(lastPrice) && lastPrice > 0) {
+    const strike = Math.round(lastPrice * 0.80);
+
+    let contracts = Math.floor(qtyShares / 100);
+    if (qtyShares > 0 && contracts < 1) contracts = 1;
+
+    const premPerShare = round2(Math.max(0, (lastPrice - strike + 1)));
+
+    if ($("#simOptExpiry")) $("#simOptExpiry").value = `${yearB}-12-25`;
+    if ($("#simOptStrike")) $("#simOptStrike").value = strike;
+    if ($("#simOptContracts")) $("#simOptContracts").value = contracts;
+    if ($("#simOptPremium")) $("#simOptPremium").value = premPerShare;
+    if ($("#simOptFee")) $("#simOptFee").value = -1;
+
+    // Єдиний сценарій: експірація. За замовчуванням S = Strike.
+    if ($("#simExerciseStockPrice")) $("#simExerciseStockPrice").value = strike;
+
+    // Підказка: показати, з чого пораховані дефолти
+    if ($("#simOptAutoHint")) {
+      $("#simOptAutoHint").textContent = `Автозаповнення: Last≈${fmtMoney(lastPrice)} → Strike≈${strike} (−20%), Контрактів≈${contracts}, Премія≈${fmtMoney(premPerShare)}.`;
     }
+  } else {
+    if ($("#simOptAutoHint")) $("#simOptAutoHint").textContent = "Автозаповнення: не вдалося оцінити Last (перевірте Qty/Value у позиції).";
+  }
 
-    if ($("#simSellDate")) $("#simSellDate").value = ($("#simSellDate").value || todayIso);
+  // Підсвітимо вибір у списку (якщо опція існує)
+  const pick = $("#simPickPosition");
+  if (pick && [...pick.options].some(o => o.value === key)) pick.value = key;
 
-    // Fill “option” defaults
-    if ($("#simOptUnderlying") && sym) $("#simOptUnderlying").value = sym;
-    if ($("#simOptCcy") && ccy) $("#simOptCcy").value = ccy;
-    if ($("#simOptBuyDate")) $("#simOptBuyDate").value = ($("#simOptBuyDate").value || todayIso);
+  simUpdateButtons();
+  updateSimRunEnabled();
 
-    // Years (default: current tax year + next)
-    const ty = Number($("#taxYear")?.value || 2025);
-    if ($("#simYearA")) $("#simYearA").value = String(ty);
-    if ($("#simYearB")) $("#simYearB").value = String(ty + 1);
+  if (!silent) showToast(`Заповнено сценарій з позиції: ${sym}`, "success", 2600);
 
-    // Enable reset; run button becomes enabled when required fields are filled
-    if ($("#btnSimReset")) $("#btnSimReset").disabled = false;
-    if (typeof updateSimSellModeUi === "function") updateSimSellModeUi();
-    if (typeof updateSimOutcomeUi === "function") updateSimOutcomeUi();
-    if (typeof updateSimRunEnabled === "function") updateSimRunEnabled();
-
-    if (d) d.scrollIntoView({behavior:"smooth", block:"start"});
-    setTimeout(() => { if ($("#simSellDate")) $("#simSellDate").focus(); }, 240);
-
-    showToast(`Сценарій заповнено з позиції: ${sym}`, "success", 2600);
-  } catch (e) {
-    console.error(e);
+  if (autoRun) {
+    // Розрахунок може бути недоступний до кроку 3 — функція сама покаже причину.
+    Promise.resolve().then(() => runSimulationScenario()).catch(() => {});
   }
 }
 
@@ -3472,6 +3513,73 @@ function resetSimForm(){
     if ($("#simDeltaCards")) $("#simDeltaCards").style.display = "none";
     showToast("Сценарій очищено", "info", 2000);
   }catch(e){ console.error(e); }
+}
+
+let _simAutoPrefillDone = false;
+
+async function simAutoPrefillDefaultScenario() {
+  try {
+    if (_simAutoPrefillDone) return;
+    if (!state?.statement || !state?.taxSummary) return;
+
+    // Do not override if user already started editing something meaningful (ignore default zeros)
+    // Use the same parameters as Step 4 "losers"
+    const asOf = ( ($("#asOfDate")?.value || state.statement?.meta?.asOfDate || state.statement?.meta?.periodEnd || "").trim() );
+    const defaultSellDate = isIsoDate(asOf) ? asOf : "";
+    const defaultOptBuyDate = defaultSellDate;
+
+    const sellDateVal = ( ($("#simSellDate")?.value || "").trim() );
+    const optBuyDateVal = ( ($("#simOptBuyDate")?.value || "").trim() );
+
+    // Якщо користувач уже почав редагувати сценарій — не перезаписуємо його поля.
+    // Важливо: simSellDate/simOptBuyDate ми НЕ вважаємо "введенням" якщо вони дорівнюють дефолту (asOf),
+    // бо ці дати підставляються автоматично під час ініціалізації модуля.
+        const userTouched =
+      ($("#simPickPosition")?.value || "").trim().length ||
+      (valNum($("#simSellQty"), 0) > 0) ||
+      (valNum($("#simOptStrike"), 0) > 0) ||
+      (valNum($("#simOptPremium"), 0) > 0);
+    if (userTouched) { _simAutoPrefillDone = true; return; }
+
+    // Note: we intentionally ignore prefilled/remembered fields like "underlying"
+    // so that browser form-restore doesn't block автозаповнення.
+const topN = Number(($("#topN")?.value || 15));
+
+    const pit = valNum($("#pitInvestRate"), 0.18);
+    const mil = valNum($("#milInvestRate"), 0.05);
+    const netProfit = Number(state.taxSummary?.invest?.netProfitUAH || 0);
+
+    // Compute top losers (async) so we can choose the biggest loss automatically
+    let losers = [];
+    try {
+      losers = await computeTopLosers(state.statement, asOf, topN, netProfit, pit, mil);
+      if (!Array.isArray(losers)) losers = [];
+    } catch (e) {
+      console.warn("simAutoPrefillDefaultScenario: cannot compute losers", e);
+      losers = [];
+    }
+
+    lastLosersRows = losers;
+    buildSimPickOptionsFromLosers(lastLosersRows);
+    if ($("#btnSimUseLoser")) $("#btnSimUseLoser").disabled = lastLosersRows.length === 0;
+
+    const best = lastLosersRows.find(r => Number(r?.unrealizedUAH) < 0) || lastLosersRows[0];
+    if (!best || !best.p) { _simAutoPrefillDone = true; return; }
+
+    const pick = $("#simPickPosition");
+    if (pick && best.p?.asset?.assetKey) pick.value = best.p.asset.assetKey;
+
+    openSimFromPosition(best.p, { autoRun: true, silent: true });
+    _simAutoPrefillDone = true;
+
+    // Small, non-intrusive notice
+    if (typeof showToast === "function") {
+      const sym = best.p?.asset?.symbolRaw || best.p?.asset?.assetKey || "";
+      showToast(`Автозаповнення сценарію: ${sym}`, "info", 2600);
+    }
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function buildSimPickOptionsFromLosers(rows){
@@ -3553,6 +3661,36 @@ $("#btnSimUseLoser").addEventListener("click", () => {
   else showToast("Спочатку натисніть «Показати» у таблиці збиткових позицій.", "warn", 3600);
 });
 $("#btnSimReset").addEventListener("click", resetSimForm);
+
+  // Автозаповнення сценарію — тільки коли користувач відкрив модуль «Моделювання…»
+  const simDetails = $("#simDetails");
+  if (simDetails){
+    simDetails.addEventListener("toggle", () => {
+      if (!simDetails.open) return;
+      // трішки відкласти, щоб DOM/лейаут точно був готовий і користувач бачив заповнення
+      setTimeout(() => {
+        try{
+          if (typeof simAutoPrefillDefaultScenario === "function") simAutoPrefillDefaultScenario();
+        }catch(e){
+          console.error(e);
+          if (typeof showToast === "function") {
+            showToast("Помилка автозаповнення сценарію: " + (e?.message || e), "error", 5200);
+          }
+        }
+      }, 50);
+    });
+
+    // In some browsers (and on file://), form values are restored and "toggle" can be flaky.
+    // So we also trigger автозаповнення on summary click.
+    const simSummary = simDetails.querySelector("summary");
+    if (simSummary){
+      simSummary.addEventListener("click", () => {
+        setTimeout(() => { try{ simAutoPrefillDefaultScenario(); } catch(e){ console.warn(e); } }, 0);
+        setTimeout(() => { try{ simAutoPrefillDefaultScenario(); } catch(e){ console.warn(e); } }, 140);
+      });
+    }
+  }
+
 
 let lastLosersCsv = "";
 
