@@ -758,7 +758,7 @@ td.num.zero{ color: var(--muted); opacity: 0.85; }
         <div class="bigCard">
           <div class="label">Інвест‑прибуток (база)</div>
           <div class="value" id="simBaseInvestProfit">—</div>
-          <div class="sub">Ф1, рядок 3.1 (прибуток). Якщо збиток — 0.00.</div>
+          <div class="sub"><span class="mono" id="simBaseInvestSub">—</span><div class="small muted" style="margin-top:6px;">Ф1, рядок 3.1 (прибуток). Якщо збиток — 0.00.</div></div>
         </div>
       </div>
 
@@ -872,7 +872,7 @@ td.num.zero{ color: var(--muted); opacity: 0.85; }
 
         <div class="inlineHelp">
           Якщо актив котирується в іншій валюті — обирайте валюту угоди.
-          Для опціону “qty” = кількість контрактів, ціна = премія за 1 контракт, multiplier враховується нижче.
+          Для опціону: qty = кількість контрактів (N), премія — у котируванні (за 1 одиницю underlying), мультиплікатор M (для акцій США зазвичай 100). Повна сума = премія × M × N.
         </div>
       </details>
 
@@ -924,7 +924,7 @@ td.num.zero{ color: var(--muted); opacity: 0.85; }
           <div class="inlineHelp">Для акційних опціонів зазвичай 100.</div>
         </div>
         <div class="field">
-          <label>Премія (за 1 контракт)</label>
+          <label>Премія (ціна опціону за 1 акцію; як котирується в IB)</label>
           <input id="simOptPremium" type="number" step="0.0001" value="0" />
         </div>
       </div>
@@ -948,85 +948,62 @@ td.num.zero{ color: var(--muted); opacity: 0.85; }
 
       <div class="hr"></div>
 
-      <h3 class="small muted" style="margin:0 0 8px 0;">3) Що далі з опціоном?</h3>
+      <h3 class="small muted" style="margin:0 0 8px 0;">3) Експірація опціону (єдиний сценарій)</h3>
 
-      <div class="row">
-        <div class="field">
-          <label>Сценарій завершення</label>
-          <select id="simOptOutcome">
-            <option value="OPEN" selected>Тримаю на кінець року (без закриття)</option>
-            <option value="CLOSE">Закрив продажем опціону</option>
-            <option value="EXERCISE">Виконання/Assignment (опціон → базовий актив)</option>
-            <option value="EXPIRE">Експірація (0.00)</option>
-          </select>
-          <div class="inlineHelp">
-            Якщо опціон <b>не закрито</b> в році A — премія зазвичай не формує фінрезультат у Ф1 цього року,
-            а вплине в році закриття/експірації/виконання.
-          </div>
-        </div>
+<div id="simExpiryWrap">
+  <div class="row">
+    <div class="field">
+      <label>Ціна базового активу на дату експірації (S)</label>
+      <input id="simExerciseStockPrice" type="number" step="0.0001" placeholder="Напр., 90.25"/>
+      <div class="inlineHelp">Введіть ціну underlying на дату експірації у валюті опціону (зазвичай USD).</div>
+    </div>
+    <div class="field">
+      <label>Курс НБУ на дату експірації (грн за 1 валюту) — опційно</label>
+      <input id="simOptExpiryFx" type="number" step="0.0001" placeholder="Авто (НБУ або останній доступний)"/>
+      <div class="inlineHelp">Якщо поле порожнє — курс береться з уже завантажених курсів. Якщо дата в майбутньому і курсу немає — буде використано <b>останній доступний</b> курс (планування) і показано попередження.</div>
+    </div>
+  </div>
 
-        <div class="field">
-          <label>Правило віднесення премії у моделюванні</label>
-          <select id="simPremiumRule">
-            <option value="ON_CLOSE" selected>Стандарт: премія враховується при закритті/експірації/виконанні</option>
-            <option value="ON_BUY">Оцінка: вважати премію витратами в день купівлі</option>
-          </select>
-          <div class="inlineHelp">
-            Рекомендовано залишити “Стандарт”. “Оцінка” корисна як стрес‑тест, але може відрізнятись від практики обліку.
-          </div>
-        </div>
-      </div>
+  <div class="status mono" style="margin:10px 0 8px 0;">
+  Формула (грн, куплений опціон до експірації):
 
-      <div id="simCloseWrap" class="hidden" style="margin-top:10px;">
-        <div class="row">
-          <div class="field">
-            <label>Дата закриття опціону</label>
-            <input id="simOptCloseDate" type="text" placeholder="YYYY-MM-DD" />
-          </div>
-          <div class="field">
-            <label>Премія закриття (за 1 контракт)</label>
-            <input id="simOptClosePremium" type="number" step="0.0001" value="0" />
-          </div>
-        </div>
+  Q = Mult × N
 
-        <div class="row">
-          <div class="field">
-            <label>Комісія закриття (зазвичай від’ємна)</label>
-            <input id="simOptCloseFee" type="number" step="0.01" value="0" />
-          </div>
-          <div class="field">
-            <label>Підказка</label>
-            <div class="status">Опціон закривається як окрема інвест‑операція (Ф1). Премії та комісії входять у результат.</div>
-          </div>
-        </div>
-      </div>
+  Payoff_ccy = max(0, S − K) × Q   (Call)
+  Payoff_ccy = max(0, K − S) × Q   (Put)
 
-      <div id="simExerciseWrap" class="hidden" style="margin-top:10px;">
-        <div class="row">
-          <div class="field">
-            <label>Дата виконання/assignment</label>
-            <input id="simExerciseDate" type="text" placeholder="YYYY-MM-DD" />
-          </div>
-          <div class="field">
-            <label>Ціна базового активу (за 1 шт.) на дату виконання</label>
-            <input id="simExerciseStockPrice" type="number" step="0.0001" value="0" />
-          </div>
-        </div>
-        <div class="inlineHelp">
-          Для виконання потрібна прив’язка до операції з базовим активом (купівля/продаж за strike) та коректне включення премії у собівартість.
-          Це реалізується в надбудові як “синтетичні угоди” (не змінюючи ваш базовий FIFO).
-        </div>
-      </div>
+  P/L_uah = Payoff_ccy × FX_exp − P × Q × FX_buy + fee × FX_buy
+</div>
 
-      <div class="hr"></div>
+<div class="inlineHelp">
+  Де <span class="mono">P</span> — премія (ціна опціону) за <b>1 акцію</b> базового активу (як котирується в IB),
+  <span class="mono">S</span> — ціна базового активу на дату експірації, <span class="mono">K</span> — strike,
+  <span class="mono">fee</span> — комісія за купівлю опціону (зазвичай від'ємна в IB),
+  <span class="mono">FX_buy</span>/<span class="mono">FX_exp</span> — курс НБУ валюти опціону на дату купівлі/експірації.
+  У підсумку нижче показуємо дві події cashflow по датах, щоб можна було перевірити розрахунок “на око”.
+</div>
+</div>
 
-      <div class="btns">
+<div class="btns">
         <button id="btnSimRun" type="button" disabled>Розрахувати сценарій</button>
         <button id="btnSimReset" class="secondary" type="button" disabled>Скинути сценарій</button>
         <button id="btnSimUseLoser" class="ghost" type="button" disabled>Підставити зі збиткових позицій</button>
       </div>
 
       <div id="simStatus" class="status">Заповніть поля сценарію та натисніть “Розрахувати сценарій”.</div>
+
+
+
+<details id="simCashflowDetails" class="hidden" open style="margin-top:10px;">
+  <summary>Розклад cashflow та формула (для перевірки)</summary>
+  <div class="inlineHelp">
+    Тут показано дві події: витрата премії на дату купівлі та payoff на дату експірації.
+    Премія конвертується у грн за курсом НБУ на дату купівлі (<span class="mono">FX_buy</span>),
+    payoff — за курсом на дату експірації (<span class="mono">FX_exp</span>).
+  </div>
+  <div class="tableWrap" style="margin-top:8px;"><table id="tblSimCashflow"></table></div>
+  <div id="simFormulaExplain" class="status mono" style="margin-top:10px;"></div>
+</details>
 
       <div class="hr"></div>
 
@@ -1100,6 +1077,27 @@ function fmt2(x) {
   intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, "'");
   return (neg ? "-" : "") + intPart + "." + decPart;
 }
+
+function fmt0(x){
+  if (x===null || x===undefined || x==="") return "";
+  const n = Number(x);
+  if (!Number.isFinite(n)) return String(x);
+  return Math.round(n)
+    .toLocaleString("uk-UA", { maximumFractionDigits: 0 })
+    .replace(/\u00A0/g, " ")
+    .replace(/ /g, "'");
+}
+
+function fmt4(x){
+  if (x===null || x===undefined || x==="") return "";
+  const n = Number(x);
+  if (!Number.isFinite(n)) return String(x);
+  return n
+    .toLocaleString("uk-UA", { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+    .replace(/\u00A0/g, " ")
+    .replace(/ /g, "'");
+}
+
 function round2(x){ return Math.round((x + Number.EPSILON) * 100) / 100; }
 
 function downloadBlob(filename, mime, textOrBlob) {
@@ -1659,6 +1657,32 @@ function fxRateSync(currency, isoDate) {
   }
   return null;
 }
+
+function fxLatestRate(ccy){
+  const key = String(ccy || "").toUpperCase();
+  const mp = fxStore?.maps?.get(key);
+  if (!mp || mp.size === 0) return {rate:null, date:null};
+  let bestDate = null;
+  let bestRate = null;
+  for (const [d, r] of mp.entries()){
+    if (!bestDate || d > bestDate){
+      bestDate = d; bestRate = r;
+    }
+  }
+  return {rate:bestRate, date:bestDate};
+}
+
+function fxRateForModel(ccy, isoDate, manualRate){
+  const key = String(ccy || "").toUpperCase();
+  const m = Number(manualRate);
+  if (Number.isFinite(m) && m > 0) return {rate:m, source:"MANUAL"};
+  const r = fxRateSync(key, isoDate);
+  if (r) return {rate:r, source:"NBU"};
+  const latest = fxLatestRate(key);
+  if (latest.rate) return {rate:latest.rate, source:`LATEST:${latest.date}`};
+  return {rate:null, source:"MISSING"};
+}
+
 
 function loadFxFromBundle(bundle) {
   fxStore.maps.clear();
@@ -3326,6 +3350,8 @@ $("#btnCalc").addEventListener("click", async () => {
     // step 4 readiness
     $("#btnShowLosers").disabled = false;
     $("#btnCopyLosers").disabled = false;
+    // Simulation base cards (tax harvesting + options)
+    if (typeof updateSimBaseCards === "function") updateSimBaseCards();
 
     setStatus($("#statusCalc"), "Готово ✅", "good");
     updateNav();
@@ -3411,9 +3437,11 @@ function openSimFromPosition(pos){
     if ($("#simYearA")) $("#simYearA").value = String(ty);
     if ($("#simYearB")) $("#simYearB").value = String(ty + 1);
 
-    // Enable scenario actions (calculation may be added later)
-    if ($("#btnSimRun")) $("#btnSimRun").disabled = false;
+    // Enable reset; run button becomes enabled when required fields are filled
     if ($("#btnSimReset")) $("#btnSimReset").disabled = false;
+    if (typeof updateSimSellModeUi === "function") updateSimSellModeUi();
+    if (typeof updateSimOutcomeUi === "function") updateSimOutcomeUi();
+    if (typeof updateSimRunEnabled === "function") updateSimRunEnabled();
 
     if (d) d.scrollIntoView({behavior:"smooth", block:"start"});
     setTimeout(() => { if ($("#simSellDate")) $("#simSellDate").focus(); }, 240);
@@ -3431,7 +3459,7 @@ function resetSimForm(){
       "#simOptUnderlying","#simOptBuyDate","#simOptExpiry","#simOptStrike","#simOptRight","#simOptContracts",
       "#simOptPremium","#simOptFee",
       "#simOptOutcome","#simOptCloseDate","#simOptClosePremium","#simOptCloseFee",
-      "#simExerciseStockPrice"
+      "#simExerciseStockPrice","#simOptExpiryFx"
     ];
     els.forEach(sel => { const el = $(sel); if (el) el.value = ""; });
     if ($("#simSellCalcMode")) $("#simSellCalcMode").value = "MANUAL";
@@ -3612,6 +3640,704 @@ $("#btnCopyLosers").addEventListener("click", async () => {
   $("#btnCopyLosers").textContent = ok ? "Скопійовано" : "Не вдалося";
   setTimeout(()=>$("#btnCopyLosers").textContent="Копіювати таблицю (CSV)", 1200);
 });
+
+
+/* =========================
+   Simulation: tax harvesting + options (by years)
+   (overlay; does not mutate FIFO engine state)
+========================= */
+
+function isIsoDate(s){ return /^\d{4}-\d{2}-\d{2}$/.test(String(s||"").trim()); }
+function isoYearStr(iso){ return String(iso||"").slice(0,4); }
+function valStr(sel){ const el = $(sel); return String(el ? el.value : "").trim(); }
+function valNum(sel, def=0){
+  const el = $(sel);
+  const v = el ? Number(el.value) : NaN;
+  return Number.isFinite(v) ? v : def;
+}
+function normalizeAssetKey(inp, ccy){
+  const t = String(inp||"").trim();
+  if (!t) return "";
+  if (t.includes("|")) return t;
+  const sym = t.replace(/\s+/g,"").toUpperCase();
+  const C = String(ccy||"").toUpperCase() || "USD";
+  return `STK|${C}|${sym}`;
+}
+function getSymbolFromAssetKey(assetKey){
+  const parts = String(assetKey||"").split("|");
+  return parts[2] || "";
+}
+
+/* --- UI toggles --- */
+function updateSimSellModeUi(){
+  const mode = valStr("#simSellCalcMode");
+  const a = $("#simSellNetCashWrap");
+  const b = $("#simSellPriceWrap");
+  if (a) a.style.display = (mode === "MANUAL") ? "block" : "none";
+  if (b) b.style.display = (mode === "AUTO") ? "block" : "none";
+}
+function updateSimOutcomeUi(){
+  // Єдиний сценарій: тримаємо опціон до експірації.
+  const optOn = (valNum("#simOptContracts",0) > 0 && valNum("#simOptPremium",0) > 0);
+
+  const wrap = $("#simExpiryWrap");
+  if (wrap) wrap.style.display = optOn ? "" : "none";
+
+  // Дефолт експірації: +1 рік від дати купівлі (якщо поле порожнє)
+  const buy = valStr("#simOptBuyDate");
+  const expEl = $("#simOptExpiry");
+  if (optOn && expEl && isIsoDate(buy) && !isIsoDate(expEl.value)) {
+    const d = new Date(buy + "T00:00:00");
+    d.setFullYear(d.getFullYear() + 1);
+    expEl.value = d.toISOString().slice(0,10);
+  }
+
+  // Синхронізуємо роки з дат (щоб “по роках” було інтуїтивно)
+  const sellDate = valStr("#simSellDate");
+  if (isIsoDate(sellDate)) {
+    const y = sellDate.slice(0,4);
+    const yEl = $("#simYearA");
+    if (yEl && String(yEl.value) !== String(y)) yEl.value = String(y);
+  }
+  const exp = valStr("#simOptExpiry");
+  if (isIsoDate(exp)) {
+    const y = exp.slice(0,4);
+    const yEl = $("#simYearB");
+    if (yEl && String(yEl.value) !== String(y)) yEl.value = String(y);
+  }
+}
+
+/* --- enabling logic --- */
+function simHasRequiredInputs(){
+  // Мінімум для сценарію “продати збиток”
+  const symRaw = valStr("#simUnderlyingKey");
+  const ccy = valStr("#simSellCcy");
+  const assetKey = normalizeAssetKey(symRaw, ccy);
+
+  const sellDate = valStr("#simSellDate");
+  const qty = valNum("#simSellQty", NaN);
+
+  const sellMode = valStr("#simSellCalcMode") || "AUTO";
+  const sellNetCash = valNum("#simSellNetCash", NaN);
+  const sellPrice = valNum("#simSellPrice", NaN);
+
+  if (!assetKey) return false;
+  if (!isIsoDate(sellDate)) return false;
+  if (!(Number.isFinite(qty) && qty > 0)) return false;
+
+  if (sellMode === "MANUAL") {
+    if (!Number.isFinite(sellNetCash)) return false;
+  } else {
+    if (!(Number.isFinite(sellPrice) && sellPrice > 0)) return false;
+  }
+
+  // Опціональна частина (якщо контракти/премія = 0 — рахуємо тільки продаж)
+  const optOn = (valNum("#simOptContracts",0) > 0 && valNum("#simOptPremium",0) > 0);
+  if (!optOn) return true;
+
+  const optBuy = valStr("#simOptBuyDate");
+  const optExpiry = valStr("#simOptExpiry");
+  const optRight = (valStr("#simOptRight") || "C").toUpperCase(); // C або P
+
+  const strike = valNum("#simOptStrike", NaN);
+  const contracts = valNum("#simOptContracts", NaN);
+  const mult = valNum("#simOptMultiplier", NaN);
+  const premium = valNum("#simOptPremium", NaN);
+  const optCcy = valStr("#simOptCcy");
+
+  const sExp = valNum("#simExerciseStockPrice", NaN);
+
+  if (!isIsoDate(optBuy)) return false;
+  if (!isIsoDate(optExpiry)) return false;
+  if (!(optRight === "C" || optRight === "P")) return false;
+
+  if (!(Number.isFinite(strike) && strike >= 0)) return false;
+  if (!(Number.isFinite(contracts) && contracts > 0)) return false;
+  if (!(Number.isFinite(mult) && mult > 0)) return false;
+  if (!Number.isFinite(premium)) return false;
+  if (!optCcy) return false;
+
+  if (!(Number.isFinite(sExp) && sExp >= 0)) return false;
+
+  return true;
+}
+
+function updateSimRunEnabled(){
+  updateSimSellModeUi();
+  updateSimOutcomeUi();
+
+  const btn = $("#btnSimRun");
+  if (!btn) return;
+
+  const ok = simHasRequiredInputs();
+  btn.disabled = !ok;
+
+  if (!state.taxSummary) {
+    setStatus($("#simStatus"), "Спочатку зробіть «Розрахувати податки» (крок 3).", "warn");
+    return;
+  }
+  if (!ok) {
+    setStatus($("#simStatus"),
+      "Заповніть обов’язкові поля (продаж) та, за потреби, параметри опціону.\n" +
+      "Порада: клікніть assetKey у таблиці позицій вище — форма заповниться автоматично.",
+      "warn"
+    );
+  } else {
+    setStatus($("#simStatus"), "Готово ✅ Натисніть «Розрахувати сценарій».", "good");
+  }
+}
+
+/* --- baseline cards --- */
+function updateSimBaseCards(){
+  if (!state.taxSummary || !state.f1) return;
+
+  const y = Number(state.f1.taxYear);
+  $("#simBaseYear").textContent = String(y);
+  $("#simBaseTotal").textContent = `${fmt2(state.taxSummary.totals.totalUAH)} грн`;
+  $("#simBaseBreakdown").textContent = `ПДФО: ${fmt2(state.taxSummary.totals.pitUAH)} • ВЗ: ${fmt2(state.taxSummary.totals.milUAH)}`;
+  $("#simBaseInvestProfit").textContent = `${fmt2(state.taxSummary.invest.netProfitUAH)} грн`;
+  $("#simBaseInvestSub").textContent = `ПДФО: ${fmt2(state.taxSummary.invest.pitUAH)} • ВЗ: ${fmt2(state.taxSummary.invest.milUAH)}`;
+
+  // defaults for years
+  if ($("#simYearA")) $("#simYearA").value = String(y);
+  if ($("#simYearB")) $("#simYearB").value = String(y + 1);
+
+  // default dates if empty
+  const asOf = state.statement?.meta?.asOfDate || state.statement?.meta?.periodEnd || "";
+  if ($("#simSellDate") && !valStr("#simSellDate") && isIsoDate(asOf)) $("#simSellDate").value = asOf;
+  if ($("#simOptBuyDate") && !valStr("#simOptBuyDate") && isIsoDate(valStr("#simSellDate"))) $("#simOptBuyDate").value = valStr("#simSellDate");
+
+  updateSimRunEnabled();
+}
+
+/* --- FIFO overlay match (single asset) --- */
+function getAssetQueueForKey(assetKey, sellCcy, sellDate){
+  // prefer FIFO books from the main engine (already UAH-converted per trade date)
+  const q0 = state.fifo?.books?.get ? state.fifo.books.get(assetKey) : null;
+  if (q0 && q0.length) return q0;
+
+  // fallback: try Open Positions costBasis (approximation)
+  const pos = state.statement?.positions?.find(p => p.asset?.assetKey === assetKey)
+    || state.statement?.positions?.find(p => (p.asset?.symbolRaw||"").replace(/\s+/g,"").toUpperCase() === getSymbolFromAssetKey(assetKey).toUpperCase()
+      && String(p.asset?.currency||"").toUpperCase() === String(sellCcy||"").toUpperCase());
+  if (!pos) return [];
+  const r = fxRateSync(pos.asset.currency, sellDate);
+  if (!r) return [];
+  const cashUAH = - (pos.costBasis * r); // approximation (uses sell-date FX)
+  return [{ qtySigned: pos.quantity, cashUAH, openDate: state.statement?.meta?.periodStart || sellDate }];
+}
+
+function fifoMatchOne(assetQueue, qtySigned, cashUAH, closeDate){
+  const queue = assetQueue.map(x => ({ qtySigned: x.qtySigned, cashUAH: x.cashUAH, openDate: x.openDate }));
+  let qtyRem = qtySigned;
+  let cashRemUAH = cashUAH;
+
+  const matches = [];
+  while (queue.length > 0 && sign(qtyRem) !== 0 && sign(qtyRem) !== sign(queue[0].qtySigned)) {
+    const lot = queue[0];
+    const lotQtyAbs = abs(lot.qtySigned);
+    const trQtyAbs  = abs(qtyRem);
+    const matchQtyAbs = Math.min(lotQtyAbs, trQtyAbs);
+
+    const lotCashPart = allocPart(lot.cashUAH, matchQtyAbs, lotQtyAbs);
+    const trCashPart  = allocPart(cashRemUAH, matchQtyAbs, trQtyAbs);
+
+    const openCashUAH  = lotCashPart;
+    const closeCashUAH = trCashPart;
+
+    const incomeUAH  = Math.max(openCashUAH, 0) + Math.max(closeCashUAH, 0);
+    const expenseUAH = -Math.min(openCashUAH, 0) + -Math.min(closeCashUAH, 0);
+    const pnlUAH     = openCashUAH + closeCashUAH;
+
+    matches.push({ qtyAbs: matchQtyAbs, openDate: lot.openDate, closeDate, incomeUAH, expenseUAH, pnlUAH });
+
+    const lotS = sign(lot.qtySigned);
+    lot.qtySigned = lot.qtySigned - lotS * matchQtyAbs;
+    lot.cashUAH   = lot.cashUAH   - lotCashPart;
+
+    const trS = sign(qtyRem);
+    qtyRem     = qtyRem     - trS * matchQtyAbs;
+    cashRemUAH = cashRemUAH - trCashPart;
+
+    if (abs(lot.qtySigned) < 1e-12) queue.shift();
+  }
+  return { matches, qtyRem, cashRemUAH };
+}
+function sumMatches(matches){
+  return {
+    incomeUAH: round2(matches.reduce((s,m)=>s + (m.incomeUAH||0),0)),
+    expenseUAH: round2(matches.reduce((s,m)=>s + (m.expenseUAH||0),0)),
+    pnlUAH: round2(matches.reduce((s,m)=>s + (m.pnlUAH||0),0)),
+    qtyAbs: round2(matches.reduce((s,m)=>s + (m.qtyAbs||0),0)),
+  };
+}
+
+/* --- scenario build --- */
+function buildSimEvents(settings){
+  state.simBreakdown = null;
+  const events = [];
+
+  // ---- Underlying sale ----
+  const sellCcy = valStr("#simSellCcy").toUpperCase();
+  const underlyingKey = normalizeAssetKey(valStr("#simUnderlyingKey"), sellCcy);
+  const sellDate = valStr("#simSellDate");
+  const sellQtyAbs = valNum("#simSellQty", NaN);
+  const mode = valStr("#simSellCalcMode");
+  const fee = valNum("#simSellFee", 0);
+
+  let sellNetCash = NaN;
+  if (mode === "MANUAL") {
+    sellNetCash = Number(valStr("#simSellNetCash"));
+  } else {
+    const price = valNum("#simSellPrice", NaN);
+    sellNetCash = (sellQtyAbs * price) + fee;
+  }
+  if (!Number.isFinite(sellNetCash)) throw new Error("Некоректний netCash для продажу.");
+  if (!isIsoDate(sellDate)) throw new Error("Некоректна дата продажу (YYYY-MM-DD).");
+
+  const rateSell = fxRateSync(sellCcy, sellDate);
+  if (!rateSell) throw new Error(`Немає курсу НБУ для ${sellCcy} на ${sellDate}. Додайте FX у кроці 2.`);
+  const sellCashUAH = sellNetCash * rateSell;
+
+  const queue = getAssetQueueForKey(underlyingKey, sellCcy, sellDate);
+  if (!queue.length) throw new Error("Не вдалося визначити базу (cost basis) для активу. Перевірте assetKey та історію.");
+
+  const match = fifoMatchOne(queue, -sellQtyAbs, sellCashUAH, sellDate);
+  const agg = sumMatches(match.matches);
+
+  events.push({
+    date: sellDate,
+    year: Number(isoYearStr(sellDate)),
+    title: "Продаж базового активу (tax harvesting)",
+    details: `${underlyingKey} • qty ${sellQtyAbs} • netCash ${fmt2(sellNetCash)} ${sellCcy} @ FX ${fmt2(rateSell)}`,
+    incomeUAH: agg.incomeUAH,
+    expenseUAH: agg.expenseUAH,
+    pnlUAH: agg.pnlUAH
+  });
+
+  if (abs(match.qtyRem) >= 1e-12) {
+    events.push({
+      date: sellDate,
+      year: Number(isoYearStr(sellDate)),
+      title: "⚠️ Попередження",
+      details: "Продано більше, ніж доступно в FIFO-лотах (можливий шорт або не вистачає історії). Результат може бути некоректним.",
+      incomeUAH: 0, expenseUAH: 0, pnlUAH: 0
+    });
+  }
+
+    // ---- Option leg (optional) ----
+  // Єдиний сценарій: тримаємо опціон до експірації і фіксуємо результат у році експірації.
+  const contracts = valNum("#simOptContracts",0);
+  const premium = valNum("#simOptPremium",0);
+  const mult = valNum("#simOptMultiplier",100);
+  const optCcy = valStr("#simOptCcy") || sellCcy;
+  const optBuyDate = valStr("#simOptBuyDate");
+  const strike = valNum("#simOptStrike", NaN);
+  const feeOpen = valNum("#simOptFee", 0); // комісія, зазвичай від'ємна
+  const optRight = (valStr("#simOptRight") || "C").toUpperCase(); // C або P
+
+  const expDate = valStr("#simOptExpiry");
+  const sExp = valNum("#simExerciseStockPrice", NaN);
+  const manualFxExp = valNum("#simOptExpiryFx", NaN);
+
+  const optEnabled = (contracts > 0 && premium > 0);
+
+  if (optEnabled){
+    if (!isIsoDate(optBuyDate)) throw new Error("Вкажіть дату купівлі опціону");
+    if (!isIsoDate(expDate)) throw new Error("Вкажіть дату експірації опціону");
+    if (!(optRight === "C" || optRight === "P")) throw new Error("Тип опціону має бути Call (C) або Put (P)");
+    if (!(Number.isFinite(strike) && strike >= 0)) throw new Error("Вкажіть strike опціону");
+    if (!(Number.isFinite(mult) && mult > 0)) throw new Error("Вкажіть мультиплікатор опціону");
+    if (!(Number.isFinite(sExp) && sExp >= 0)) throw new Error("Вкажіть ціну базового активу на дату експірації (S)");
+
+    // Премія сплачена в дату купівлі → конвертація за курсом НБУ на дату купівлі
+const rBuy = fxRateSync(optCcy, optBuyDate);
+const shares = contracts * mult;
+
+// Cashflow на дату купівлі:
+//   premium — ціна опціону за 1 акцію (як котирується в IB)
+//   BUY опціону = витрата премії: -premium×Q
+//   fee вводьте зі знаком "–" (як у виписці IB), тому в формулі він додається
+const premiumCcy = premium * shares;      // >0
+const feeBuyCcy = Number.isFinite(feeOpen) ? feeOpen : 0; // зазвичай <0
+const buyNetCcy = (-premiumCcy) + feeBuyCcy;
+const buyNetUAH = buyNetCcy * rBuy;
+
+// Для подій income/expense зручно мати "витрату" як додатне число:
+const premCostCCY = premiumCcy - feeBuyCcy; // fee negative => + до витрат
+const premCostUAH = premCostCCY * rBuy;
+
+// Курс на дату експірації.
+// Якщо дати в майбутньому і немає НБУ-курсу, можна задати FX вручну (або залишити 0 → буде NBU/пошук назад).
+const fxExp = fxRateForModel(optCcy, expDate, manualFxExp);
+
+// intrinsic/payoff at expiry (у валюті опціону)
+const intrinsicPerShare = (optRight === "P") ? Math.max(0, strike - sExp) : Math.max(0, sExp - strike);
+const payoffCCY = intrinsicPerShare * shares;
+const payoffUAH = payoffCCY * fxExp.rate;
+
+// P/L у грн (expiry-only): payoff (FX_exp) + cashflow_buy (FX_buy)
+const pnlUAH = payoffUAH + buyNetUAH;
+
+// breakdown for UI transparency
+state.simBreakdown = {
+  ccy: optCcy,
+  optionType: optRight,
+  buyDate: optBuyDate,
+  expDate: expDate,
+  mult: mult,
+  contracts: contracts,
+  qShares: shares,
+
+  premiumPerShare: premium,
+  feeCcy: feeBuyCcy,
+  fxBuy: rBuy,
+  buyUAH: buyNetUAH,
+
+  strike: strike,
+  sExp: sExp,
+  payoffPerShare: intrinsicPerShare,
+  payoffCcy: payoffCCY,
+  fxExp: fxExp.rate,
+  expUAH: payoffUAH,
+
+  plUAH: pnlUAH
+};
+    const optTypeTxt = (optRight === "P") ? "Put" : "Call";
+    const fxNote = (fxExp.source && fxExp.source !== "NBU") ? ` (${fxExp.source})` : "";
+
+    const undTxt = valStr("#simOptUnderlying") || getSymbolFromAssetKey(assetKey) || assetKey;
+
+    // Інформативно: “купівля” (0 ефекту в моделі), щоб не плутати дати
+    events.push({
+      id: "sim-opt-buy",
+      kind: "opt-buy",
+      assetKey: `OPT:${undTxt}`,
+      dateTime: optBuyDate + "T00:00:00",
+      date: optBuyDate,
+      year: Number(isoYearStr(optBuyDate)),
+      ccy: optCcy,
+      incomeUAH: 0, expenseUAH: 0, pnlUAH: 0,
+      details: `Купівля ${optTypeTxt} на ${undTxt}: премія ${fmt2(premium)} × M(${fmt2(mult)}) × N(${fmt2(contracts)}) = ${fmt2(premium*shares)} ${optCcy}; комісія ${fmt2(feeOpen)} ${optCcy}. У моделі результат враховується у році експірації.`
+    });
+
+    // Фіксуємо весь результат у році експірації (рік B)
+    events.push({
+      id: "sim-opt-expiry",
+      kind: "opt-expiry",
+      assetKey: `OPT:${undTxt}`,
+      dateTime: expDate + "T00:00:00",
+      date: expDate,
+      year: Number(isoYearStr(expDate)),
+      ccy: optCcy,
+      incomeUAH: payoffUAH,
+      expenseUAH: premCostUAH,
+      pnlUAH: pnlUAH,
+      details: `Експірація ${optTypeTxt} на ${undTxt}: S=${fmt2(sExp)} K=${fmt2(strike)} ⇒ intrinsic=${fmt2(intrinsicPerShare)}; payoff=${fmt2(payoffCCY)} ${optCcy}. Премія+комісія=${fmt2(premCostCCY)} ${optCcy} (курс купівлі ${rBuy.toFixed(4)}). Курс експірації ${fxExp.rate.toFixed(4)}${fxNote}. P/L=${fmt2(pnlUAH)} грн.`
+    });
+
+    if (fxExp.source && fxExp.source.startsWith("LATEST")){
+      showToast(`Для ${optCcy} на дату ${expDate} курс НБУ не знайдено — використано останній доступний (${fxExp.source}). Для точності введіть курс вручну.`, "warn", 6400);
+    }
+  }
+
+  return events;
+}
+
+function aggregateByYear(events){
+  const mp = new Map();
+  for (const e of events) {
+    const y = Number(e.year);
+    const cur = mp.get(y) || { pnl:0, income:0, expense:0 };
+    cur.pnl += Number(e.pnlUAH||0);
+    cur.income += Number(e.incomeUAH||0);
+    cur.expense += Number(e.expenseUAH||0);
+    mp.set(y, cur);
+  }
+  // round
+  for (const [y,v] of mp.entries()) {
+    mp.set(y, { pnl: round2(v.pnl), income: round2(v.income), expense: round2(v.expense) });
+  }
+  return mp;
+}
+
+/* --- baseline per year (re-uses fifo.matches; does not alter state) --- */
+async function computeBaseTaxesForYear(year, settings){
+  const y = Number(year);
+
+  if (!state.statement) throw new Error("Немає даних statement.");
+  if (!state.assetIndex) state.assetIndex = buildAssetIndex(state.statement);
+
+  // fifo matches
+  if (!state.fifo) state.fifo = await fifoInUAH(state.statement.trades);
+
+  const sY = { ...settings, taxYear: y, carryLossUAH: (y === settings.taxYear ? settings.carryLossUAH : 0) };
+  const f1 = buildF1Model(state.statement, state.assetIndex, state.fifo.matches, sY);
+
+  // Dividends for that year (may be 0)
+  const div = await computeDividendsUAH(state.statement, sY);
+  const whDiv = await computeWithholdingOnDivUAH(state.statement, sY);
+
+  const divUAH = round2(div.totalUAH || 0);
+  const whDivUAH = round2(whDiv.totalUAH || 0);
+
+  const divPITgross = round2(divUAH * sY.pitDivRate);
+  const divMIL = round2(divUAH * sY.milDivRate);
+  const credit = sY.useForeignTaxCredit ? Math.min(divPITgross, whDivUAH) : 0;
+  const divPITdue = round2(divPITgross - credit);
+
+  const investPIT = round2(f1.investTaxes.pitDueUAH);
+  const investMIL = round2(f1.investTaxes.milDueUAH);
+
+  const totalPIT = round2(investPIT + divPITdue);
+  const totalMIL = round2(investMIL + divMIL);
+
+  return {
+    year: y,
+    investNetResultUAH: f1.totals.netResultUAH,
+    investNetProfitUAH: f1.totals.netProfitUAH,
+    investPIT, investMIL,
+    divPITdue, divMIL,
+    totalPIT, totalMIL,
+    total: round2(totalPIT + totalMIL)
+  };
+}
+
+/* --- rendering --- */
+function renderSimEvents(events){
+  const rows = events.map(e => ({
+    date: e.date,
+    year: e.year,
+    title: e.title,
+    details: e.details,
+    incomeUAH: round2(e.incomeUAH || 0),
+    expenseUAH: round2(e.expenseUAH || 0),
+    pnlUAH: round2(e.pnlUAH || 0),
+  }));
+  renderTable($("#tblSimEvents"), [
+    { label:"Дата", value:(r)=>r.date },
+    { label:"Рік", value:(r)=>r.year },
+    { label:"Подія", value:(r)=>r.title },
+    { label:"Деталі", value:(r)=>r.details },
+    { label:"Дохід (грн)", value:(r)=>r.incomeUAH, num:true },
+    { label:"Витрати (грн)", value:(r)=>r.expenseUAH, num:true },
+    { label:"Результат (грн)", value:(r)=>r.pnlUAH, num:true },
+  ], rows);
+}
+function renderSimYears(rows){
+  renderTable($("#tblSimYears"), [
+    { label:"Рік", value:(r)=>r.year },
+    { label:"Δ інвест‑результат (грн)", value:(r)=>r.deltaPnl, num:true },
+    { label:"База: інвест‑прибуток", value:(r)=>r.baseInvestProfit, num:true },
+    { label:"Сценарій: інвест‑прибуток", value:(r)=>r.scInvestProfit, num:true },
+    { label:"База: податок інвест (ПДФО+ВЗ)", value:(r)=>r.baseInvestTax, num:true },
+    { label:"Сценарій: податок інвест (ПДФО+ВЗ)", value:(r)=>r.scInvestTax, num:true },
+    { label:"Δ разом (грн)", value:(r)=>r.deltaTotal, num:true },
+    { label:"База: разом", value:(r)=>r.baseTotal, num:true },
+    { label:"Сценарій: разом", value:(r)=>r.scTotal, num:true },
+  ], rows);
+}
+
+
+
+function renderSimCashflowBreakdown(bd){
+  const details = $("#simCashflowDetails");
+  const tbl = $("#tblSimCashflow");
+  const box = $("#simFormulaExplain");
+  if (!details || !tbl || !box) return;
+
+  if (!bd){
+    details.classList.add("hidden");
+    tbl.innerHTML = "";
+    box.textContent = "";
+    return;
+  }
+
+  details.classList.remove("hidden");
+
+  const Q = Number(bd.qShares)||0;
+  const premOnlyCcy = -(Number(bd.premiumPerShare)||0) * Q;
+  const feeCcy = Number(bd.feeCcy)||0;
+  const buyNetCcy = premOnlyCcy + feeCcy;
+
+  const payoffFormula = (bd.optionType === "P") ? "max(0, K−S)" : "max(0, S−K)";
+  const payoffPer = Number(bd.payoffPerShare)||0;
+  const payoffCcy = Number(bd.payoffCcy)||0;
+
+  const buyCalcParts = [
+    `−P×Q = −${fmt2(bd.premiumPerShare)}×${fmt0(Q)} = ${fmt2(premOnlyCcy)} ${bd.ccy}`
+  ];
+  if (feeCcy) buyCalcParts.push(`fee = ${fmt2(feeCcy)} ${bd.ccy}`);
+  buyCalcParts.push(`разом = ${fmt2(buyNetCcy)} ${bd.ccy}`);
+
+  const expCalc =
+    payoffPer > 0
+      ? `${payoffFormula}×Q = ${fmt2(payoffPer)}×${fmt0(Q)} = ${fmt2(payoffCcy)} ${bd.ccy}`
+      : `${payoffFormula}×Q = 0`;
+
+  const rows = [
+    {
+      date: bd.buyDate,
+      event: "Дата купівлі опціону",
+      calc: buyCalcParts.join("; "),
+      fx: bd.fxBuy,
+      uah: bd.buyUAH
+    },
+    {
+      date: bd.expDate,
+      event: "Дата експірації",
+      calc: `${expCalc}; S=${fmt2(bd.sExp)}, K=${fmt2(bd.strike)}`,
+      fx: bd.fxExp,
+      uah: bd.expUAH
+    },
+  ];
+
+  renderTable(tbl, [
+    { label:"Дата", value:(r)=>r.date },
+    { label:"Подія", value:(r)=>r.event },
+    { label:"Розрахунок (валюта)", value:(r)=>r.calc },
+    { label:"FX", value:(r)=>r.fx, num:true },
+    { label:"Сума (грн)", value:(r)=>r.uah, num:true },
+  ], rows);
+
+  const sSign = (bd.optionType === "P") ? "K−S" : "S−K";
+
+  box.innerHTML =
+    `<div><b>Формула (грн):</b></div>` +
+    `<div class="mono">P/L = max(0, ${sSign}) × Q × FX<sub>exp</sub> − P × Q × FX<sub>buy</sub> + fee × FX<sub>buy</sub></div>` +
+    `<div style="margin-top:8px; line-height:1.5;">` +
+      `Q = Mult × N = <b>${fmt0(bd.mult)}</b> × <b>${fmt0(bd.contracts)}</b> = <b>${fmt0(Q)}</b> акцій<br>` +
+      `P (премія) = <b>${fmt2(bd.premiumPerShare)}</b> ${bd.ccy} за 1 акцію; fee = <b>${fmt2(bd.feeCcy)}</b> ${bd.ccy}<br>` +
+      `FX_buy = <b>${fmt4(bd.fxBuy)}</b>; FX_exp = <b>${fmt4(bd.fxExp)}</b><br>` +
+      `<b>P/L = ${fmt2(bd.plUAH)} грн</b>` +
+    `</div>`;
+}
+
+/* --- main run --- */
+async function runSimulationScenario(){
+  if (!state.taxSummary || !state.f1) {
+    showToast("Спочатку зробіть «Розрахувати податки» у кроці 3.", "warn", 4200);
+    return;
+  }
+
+  const settings = readSettings();
+
+  setStatus($("#simStatus"), "Розраховую сценарій…");
+  const events = buildSimEvents(settings);
+  const byYear = aggregateByYear(events);
+
+  const yA = Number(valStr("#simYearA"));
+  const yB = Number(valStr("#simYearB"));
+
+  const years = Array.from(new Set([ ...Array.from(byYear.keys()), yA, yB ])).filter(Number.isFinite).sort();
+
+  // baseline per year
+  const baseMap = new Map();
+  for (const y of years) {
+    if (Number(state.f1.taxYear) === Number(y)) {
+      // reuse already computed baseline (including dividends)
+      baseMap.set(Number(y), {
+        year: y,
+        investNetResultUAH: state.f1.totals.netResultUAH,
+        investNetProfitUAH: state.f1.totals.netProfitUAH,
+        investPIT: round2(state.taxSummary.invest.pitUAH),
+        investMIL: round2(state.taxSummary.invest.milUAH),
+        divPITdue: round2(state.taxSummary.totals.pitUAH - state.taxSummary.invest.pitUAH),
+        divMIL: round2(state.taxSummary.totals.milUAH - state.taxSummary.invest.milUAH),
+        totalPIT: round2(state.taxSummary.totals.pitUAH),
+        totalMIL: round2(state.taxSummary.totals.milUAH),
+        total: round2(state.taxSummary.totals.totalUAH)
+      });
+    } else {
+      baseMap.set(Number(y), await computeBaseTaxesForYear(y, settings));
+    }
+  }
+
+  // scenario per year
+  const pitR = settings.pitInvestRate;
+  const milR = settings.milInvestRate;
+
+  const rows = [];
+  for (const y of years) {
+    const base = baseMap.get(Number(y));
+    const d = byYear.get(Number(y)) || { pnl:0 };
+    const deltaPnl = round2(d.pnl || 0);
+
+    const scNetResult = round2((base.investNetResultUAH || 0) + deltaPnl);
+    const scProfit = scNetResult > 0 ? scNetResult : 0;
+
+    const scInvestPIT = round2(scProfit * pitR);
+    const scInvestMIL = round2(scProfit * milR);
+
+    const baseInvestTax = round2((base.investPIT || 0) + (base.investMIL || 0));
+    const scInvestTax = round2(scInvestPIT + scInvestMIL);
+
+    const scTotalPIT = round2((base.divPITdue || 0) + scInvestPIT);
+    const scTotalMIL = round2((base.divMIL || 0) + scInvestMIL);
+    const scTotal = round2(scTotalPIT + scTotalMIL);
+
+    const deltaTotal = round2(scTotal - (base.total || 0));
+
+    rows.push({
+      year: y,
+      deltaPnl,
+      baseInvestProfit: round2(base.investNetProfitUAH || 0),
+      scInvestProfit: round2(scProfit),
+      baseInvestTax,
+      scInvestTax,
+      deltaTotal,
+      baseTotal: round2(base.total || 0),
+      scTotal
+    });
+  }
+
+  renderSimEvents(events);
+  renderSimYears(rows);
+    renderSimCashflowBreakdown(state.simBreakdown);
+
+  const rowA = rows.find(r => Number(r.year) === Number(yA));
+  const rowB = rows.find(r => Number(r.year) === Number(yB));
+
+  let msg = "Готово ✅";
+  if (rowA) msg += `\n${yA}: Δ податку = ${fmt2(rowA.deltaTotal)} грн`;
+  if (rowB && yB !== yA) msg += `\n${yB}: Δ податку = ${fmt2(rowB.deltaTotal)} грн`;
+
+  setStatus($("#simStatus"), msg, "good");
+  showToast("Сценарій розраховано ✅", "success", 2600);
+}
+
+/* --- wire events --- */
+if ($("#btnSimRun")) {
+  $("#btnSimRun").addEventListener("click", async () => {
+    try{
+      await runSimulationScenario();
+    }catch(e){
+      console.error(e);
+      setStatus($("#simStatus"), "Помилка сценарію:\n" + (e?.message || String(e)), "bad");
+      showToast("Помилка у сценарії — перевірте введені дані.", "error", 5200);
+    }
+  });
+}
+
+// dynamic enablement (manual typing + selects)
+[
+  "#simUnderlyingKey","#simSellCcy","#simSellQty","#simSellDate","#simSellCalcMode","#simSellNetCash","#simSellPrice","#simSellFee",
+  "#simOptBuyDate","#simOptCcy","#simOptContracts","#simOptPremium","#simOptMultiplier","#simOptStrike","#simPremiumRule",
+  "#simOptOutcome","#simOptExpiry","#simOptFee","#simOptCloseDate","#simOptClosePremium","#simOptCloseFee",
+  "#simExerciseDate","#simExerciseStockPrice","#simOptExpiryFx",
+  "#simYearA","#simYearB"
+].forEach(sel => {
+  const el = $(sel);
+  if (!el) return;
+  el.addEventListener("input", updateSimRunEnabled);
+  el.addEventListener("change", updateSimRunEnabled);
+});
+
+// initial UI state for the block
+updateSimSellModeUi();
+updateSimOutcomeUi();
+updateSimRunEnabled();
+
 
 /* =========================
    Init
